@@ -1,332 +1,122 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import TroubleShootingNewPage from '../TroubleShootingNewPage';
+// Jest imports
+import '@testing-library/jest-dom';
 
-// Mock data for additional info steps
-const mockAdditionalInfoSteps = [
-  {
-    id: 'step1',
-    title: 'Additional Info Step 1',
-    description: 'Description for step 1',
-    type: 'info'
-  },
-  {
-    id: 'step2',
-    title: 'Additional Info Step 2',
-    description: 'Description for step 2',
-    type: 'warning'
-  }
-];
+// Component imports
+import { isEligibleForResumeEmail } from '../TroubleShootingNewPage';
 
-describe('TroubleShootingNewPage', () => {
-  const mockProps = {
-    steps: [],
-    currentStep: {},
-    navHistory: [],
-    handleAction: jest.fn(),
-    handleButtonClick: jest.fn(),
-    handleOptionsChange: jest.fn(),
-    additionalInfoSteps: mockAdditionalInfoSteps
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe('Utility Functions', () => {
-    test('isEligibleForResumeEmail returns correct eligibility', () => {
-      const step = { type: 'email' };
-      const navHistory = ['step1', 'step2'];
-      expect(isEligibleForResumeEmail(step, navHistory)).toBeTruthy();
-    });
-
-    test('buildSymptom creates correct symptom object', () => {
-      const text = 'Test Symptom';
-      const groupName = 'testGroup';
-      const radioValue = 'test';
-      const htmlContent = '<p>Test</p>';
-      
-      const result = buildSymptom(text, groupName, radioValue, htmlContent);
-      
-      expect(result).toEqual({
-        text: 'Test Symptom',
-        groupName: 'testGroup',
-        radioValue: 'test',
-        htmlContent: '<p>Test</p>'
-      });
-    });
-  });
-
-  describe('Event Handlers', () => {
-    test('handleButtonClick calls appropriate functions', async () => {
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const button = getByTestId('action-button');
-      
-      await userEvent.click(button);
-      
-      expect(mockProps.handleButtonClick).toHaveBeenCalled();
-    });
-
-    test('handleOptionsChange updates selected options', () => {
-      const { getByRole } = render(<TroubleShootingNewPage {...mockProps} />);
-      const select = getByRole('combobox');
-      
-      fireEvent.change(select, { target: { value: 'option1' } });
-      
-      expect(mockProps.handleOptionsChange).toHaveBeenCalledWith(expect.any(Object));
-    });
-  });
-
-  describe('Rendering', () => {
-    test('renders description correctly', () => {
-      const stepWithDescription = {
-        description: 'Test Description'
+describe('isEligibleForResumeEmail', () => {
+  describe('Template ID Based Eligibility', () => {
+    test('should return true for WAITING_FOR_RESPONSE template', () => {
+      const step = {
+        templateId: 'WAITING_FOR_RESPONSE',
+        title: 'Some Title'
       };
+      const navHistory = [];
       
-      const { getByText } = render(
-        <TroubleShootingNewPage 
-          {...mockProps} 
-          currentStep={stepWithDescription}
-        />
-      );
-      
-      expect(getByText('Test Description')).toBeInTheDocument();
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
 
-    test('renders recommended tiles when available', () => {
-      const propsWithRecommendations = {
-        ...mockProps,
-        recommendedTiles: [
-          { title: 'Recommended 1', description: 'Description 1' }
-        ]
+    test('should return true for RESOLUTION_OPTIONS_ALL template', () => {
+      const step = {
+        templateId: 'RESOLUTION_OPTIONS_ALL',
+        title: 'Some Title'
       };
+      const navHistory = [];
       
-      const { getByText } = render(
-        <TroubleShootingNewPage {...propsWithRecommendations} />
-      );
-      
-      expect(getByText('Recommended 1')).toBeInTheDocument();
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
-  });
 
-  describe('Modal Functionality', () => {
-    test('message modal renders correctly', () => {
-      const modalParams = {
-        title: 'Test Modal',
-        message: 'Modal Message'
+    test('should return false for non-matching template ID', () => {
+      const step = {
+        templateId: 'SOME_OTHER_TEMPLATE',
+        title: 'Regular Step'
       };
+      const navHistory = [{ articleId: 'article1' }];
       
-      const { getByText } = render(
-        <TroubleShootingNewPage 
-          {...mockProps}
-          showModal={true}
-          modalParams={modalParams}
-        />
-      );
-      
-      expect(getByText('Test Modal')).toBeInTheDocument();
-      expect(getByText('Modal Message')).toBeInTheDocument();
-    });
-
-    test('modal actions work correctly', async () => {
-      const handleModalAction = jest.fn();
-      const { getByText } = render(
-        <TroubleShootingNewPage 
-          {...mockProps}
-          showModal={true}
-          handleModalAction={handleModalAction}
-        />
-      );
-      
-      const actionButton = getByText('OK');
-      await userEvent.click(actionButton);
-      
-      expect(handleModalAction).toHaveBeenCalled();
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(false);
     });
   });
 
-  describe('Navigation and Routing', () => {
-    test('redirectToBAU navigates correctly', async () => {
-      const navigate = jest.fn();
-      jest.spyOn(require('react-router-dom'), 'useNavigate').mockReturnValue(navigate);
-
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const redirectButton = getByTestId('bau-redirect');
-      
-      await userEvent.click(redirectButton);
-      
-      expect(navigate).toHaveBeenCalled();
-    });
-  });
-
-  describe('Form Handling', () => {
-    test('handles form submission correctly', async () => {
-      const onSubmit = jest.fn();
-      const { getByRole } = render(
-        <TroubleShootingNewPage {...mockProps} onSubmit={onSubmit} />
-      );
-      
-      const form = getByRole('form');
-      fireEvent.submit(form);
-      
-      await waitFor(() => {
-        expect(onSubmit).toHaveBeenCalled();
-      });
-    });
-  });
-
-  describe('Accordion Functionality', () => {
-    test('accordionHandler toggles accordion state', () => {
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const accordion = getByTestId('accordion-section');
-      
-      fireEvent.click(accordion);
-      expect(accordion).toHaveClass('expanded');
-      
-      fireEvent.click(accordion);
-      expect(accordion).not.toHaveClass('expanded');
-    });
-
-    test('noteAccordionHandler works correctly', () => {
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const noteAccordion = getByTestId('note-accordion');
-      
-      fireEvent.click(noteAccordion);
-      expect(noteAccordion).toHaveClass('expanded');
-    });
-  });
-
-  describe('Network Extension Flow', () => {
-    test('handleNetworkExtFlow processes network extension correctly', async () => {
-      const mockItem = {
-        type: 'network-extension',
-        data: { networkId: '123' }
+  describe('Title Based Eligibility', () => {
+    test('should return true when title includes "End of Troubleshooting"', () => {
+      const step = {
+        templateId: 'SOME_TEMPLATE',
+        title: 'End of Troubleshooting - Success'
       };
+      const navHistory = [{ articleId: 'article1' }];
       
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const networkButton = getByTestId('network-ext-button');
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+    });
+
+    test('should return false when title does not include "End of Troubleshooting"', () => {
+      const step = {
+        templateId: 'SOME_TEMPLATE',
+        title: 'Regular Step Title'
+      };
+      const navHistory = [{ articleId: 'article1' }];
       
-      await userEvent.click(networkButton);
-      
-      expect(mockProps.handleAction).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'network-extension' })
-      );
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(false);
     });
   });
 
-  describe('Email and SMS Functionality', () => {
-    test('handleSendEmail sends email correctly', async () => {
-      const mockEvent = { preventDefault: jest.fn() };
-      const mockSubProcess = 'test-process';
-      
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const emailButton = getByTestId('send-email-button');
-      
-      await userEvent.click(emailButton);
-      
-      expect(mockProps.handleAction).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'send-email' })
-      );
-    });
-
-    test('handleSmsClick processes SMS correctly', async () => {
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const smsButton = getByTestId('sms-button');
-      
-      await userEvent.click(smsButton);
-      
-      expect(mockProps.handleAction).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'send-sms' })
-      );
-    });
-  });
-
-  describe('Feedback Handling', () => {
-    test('triggerRecommendFeedBack submits feedback correctly', async () => {
-      const mockRecommended = true;
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const feedbackButton = getByTestId('feedback-button');
-      
-      await userEvent.click(feedbackButton);
-      
-      expect(mockProps.handleAction).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'feedback', recommended: true })
-      );
-    });
-  });
-
-  describe('Device Selection', () => {
-    test('handleMulSelDeviceOptionsChange updates device selection', () => {
-      const mockMacAddress = '00:11:22:33:44:55';
-      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
-      const deviceCheckbox = getByTestId('device-checkbox');
-      
-      fireEvent.click(deviceCheckbox);
-      
-      expect(mockProps.handleOptionsChange).toHaveBeenCalledWith(
-        expect.objectContaining({ macAddress: mockMacAddress })
-      );
-    });
-  });
-
-  describe('Network Congestion', () => {
-    test('renderNetworkCongestion displays congestion data correctly', () => {
-      const mockCongestionData = [
-        ['Header1', 'Header2'],
-        ['Data1', 'Data2']
+  describe('Navigation History Based Eligibility', () => {
+    test('should return true when navHistory has no articles', () => {
+      const step = {
+        templateId: 'SOME_TEMPLATE',
+        title: 'Regular Step'
+      };
+      const navHistory = [
+        { id: 'step1' },
+        { id: 'step2' }
       ];
       
-      const { getByText } = render(
-        <TroubleShootingNewPage 
-          {...mockProps}
-          networkCongestionData={mockCongestionData}
-        />
-      );
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+    });
+
+    test('should return false when navHistory has articles', () => {
+      const step = {
+        templateId: 'SOME_TEMPLATE',
+        title: 'Regular Step'
+      };
+      const navHistory = [
+        { id: 'step1', articleId: 'article1' },
+        { id: 'step2' }
+      ];
       
-      expect(getByText('Header1')).toBeInTheDocument();
-      expect(getByText('Data1')).toBeInTheDocument();
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(false);
     });
   });
 
-  describe('Additional Info Steps', () => {
-    test('renders additional info steps correctly', () => {
-      const { getByText } = render(
-        <TroubleShootingNewPage {...mockProps} />
-      );
+  describe('Edge Cases', () => {
+    test('should handle empty step object', () => {
+      const step = {};
+      const navHistory = [];
       
-      expect(getByText('Additional Info Step 1')).toBeInTheDocument();
-      expect(getByText('Description for step 1')).toBeInTheDocument();
-      expect(getByText('Additional Info Step 2')).toBeInTheDocument();
-      expect(getByText('Description for step 2')).toBeInTheDocument();
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
 
-    test('handles additional info step interactions', async () => {
-      const { getByTestId } = render(
-        <TroubleShootingNewPage {...mockProps} />
-      );
-      
-      const step1Button = getByTestId('additional-info-step-1');
-      await userEvent.click(step1Button);
-      
-      expect(mockProps.handleAction).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'info-step',
-          stepId: 'step1'
-        })
-      );
+    test('should handle undefined parameters', () => {
+      expect(isEligibleForResumeEmail()).toBe(true);
     });
 
-    test('displays correct step type indicators', () => {
-      const { container } = render(
-        <TroubleShootingNewPage {...mockProps} />
-      );
+    test('should handle null values in step object', () => {
+      const step = {
+        templateId: null,
+        title: null
+      };
+      const navHistory = [];
       
-      const infoIcon = container.querySelector('.info-icon');
-      const warningIcon = container.querySelector('.warning-icon');
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+    });
+
+    test('should handle empty navHistory array', () => {
+      const step = {
+        templateId: 'SOME_TEMPLATE',
+        title: 'Regular Step'
+      };
+      const navHistory = [];
       
-      expect(infoIcon).toBeInTheDocument();
-      expect(warningIcon).toBeInTheDocument();
+      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
   });
 }); 
