@@ -1,0 +1,255 @@
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import UTPList from '../UTPList';
+import { UTPTickets } from 'utp-ticket-list';
+import { buildParams, openingCaseDetailsHandler } from '../utpHelpers';
+
+// Mock dependencies
+jest.mock('utp-ticket-list', () => ({
+  UTPTickets: jest.fn(({ params, openingCaseDetailsHandler }) => (
+    <div data-testid="utp-tickets">
+      <div data-testid="params">{JSON.stringify(params)}</div>
+      <button 
+        data-testid="case-details-button"
+        onClick={() => openingCaseDetailsHandler({ id: 'test-ticket' })}
+      >
+        Open Case
+      </button>
+    </div>
+  ))
+}));
+
+jest.mock('../utpHelpers', () => ({
+  buildParams: jest.fn(),
+  openingCaseDetailsHandler: jest.fn()
+}));
+
+describe('UTPList Component', () => {
+  // Common test props
+  const defaultProps = {
+    customerProfile: {
+      id: 'customer123',
+      name: 'Test Customer'
+    },
+    env: 'test',
+    isDark: false,
+    logUsageMetrics: jest.fn(),
+    UserProfile: {
+      id: 'user123',
+      name: 'Test User'
+    },
+    openLaunchoutDialog: jest.fn()
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    buildParams.mockReturnValue({ testParam: 'value' });
+  });
+
+  describe('Rendering', () => {
+    it('renders without crashing', () => {
+      render(<UTPList {...defaultProps} />);
+      expect(screen.getByTestId('utp-tickets')).toBeInTheDocument();
+    });
+
+    it('renders with minimal props', () => {
+      render(<UTPList customerProfile={{}} env="test" isDark={false} />);
+      expect(screen.getByTestId('utp-tickets')).toBeInTheDocument();
+    });
+
+    it('renders with all props', () => {
+      render(<UTPList {...defaultProps} />);
+      expect(screen.getByTestId('utp-tickets')).toBeInTheDocument();
+    });
+  });
+
+  describe('Props Handling', () => {
+    it('passes correct params to UTPTickets', () => {
+      const mockParams = { testParam: 'value' };
+      buildParams.mockReturnValue(mockParams);
+
+      render(<UTPList {...defaultProps} />);
+      
+      expect(UTPTickets).toHaveBeenCalledWith(
+        expect.objectContaining({
+          params: mockParams
+        }),
+        expect.any(Object)
+      );
+    });
+
+    it('handles different environment props', () => {
+      const environments = ['prod', 'dev', 'test', 'stage'];
+      
+      environments.forEach(env => {
+        render(<UTPList {...defaultProps} env={env} />);
+        expect(buildParams).toHaveBeenCalledWith(
+          defaultProps.customerProfile,
+          env,
+          defaultProps.isDark
+        );
+      });
+    });
+
+    it('handles theme changes', () => {
+      // Test light theme
+      render(<UTPList {...defaultProps} isDark={false} />);
+      expect(buildParams).toHaveBeenCalledWith(
+        defaultProps.customerProfile,
+        defaultProps.env,
+        false
+      );
+
+      // Test dark theme
+      render(<UTPList {...defaultProps} isDark={true} />);
+      expect(buildParams).toHaveBeenCalledWith(
+        defaultProps.customerProfile,
+        defaultProps.env,
+        true
+      );
+    });
+  });
+
+  describe('buildParams Integration', () => {
+    it('calls buildParams with correct arguments', () => {
+      render(<UTPList {...defaultProps} />);
+      
+      expect(buildParams).toHaveBeenCalledWith(
+        defaultProps.customerProfile,
+        defaultProps.env,
+        defaultProps.isDark
+      );
+    });
+
+    it('handles empty customerProfile', () => {
+      render(<UTPList {...defaultProps} customerProfile={{}} />);
+      
+      expect(buildParams).toHaveBeenCalledWith(
+        {},
+        defaultProps.env,
+        defaultProps.isDark
+      );
+    });
+
+    it('handles null customerProfile', () => {
+      render(<UTPList {...defaultProps} customerProfile={null} />);
+      
+      expect(buildParams).toHaveBeenCalledWith(
+        null,
+        defaultProps.env,
+        defaultProps.isDark
+      );
+    });
+  });
+
+  describe('Case Details Handler', () => {
+    it('calls openingCaseDetailsHandler with correct arguments', () => {
+      render(<UTPList {...defaultProps} />);
+      
+      const testTicket = { id: 'test-ticket' };
+      fireEvent.click(screen.getByTestId('case-details-button'));
+
+      expect(openingCaseDetailsHandler).toHaveBeenCalledWith(
+        testTicket,
+        defaultProps.customerProfile,
+        defaultProps.UserProfile,
+        defaultProps.openLaunchoutDialog,
+        defaultProps.logUsageMetrics
+      );
+    });
+
+    it('handles missing optional handler props', () => {
+      const minimalProps = {
+        customerProfile: defaultProps.customerProfile,
+        env: defaultProps.env,
+        isDark: defaultProps.isDark
+      };
+
+      render(<UTPList {...minimalProps} />);
+      
+      const testTicket = { id: 'test-ticket' };
+      fireEvent.click(screen.getByTestId('case-details-button'));
+
+      expect(openingCaseDetailsHandler).toHaveBeenCalledWith(
+        testTicket,
+        minimalProps.customerProfile,
+        undefined,
+        undefined,
+        undefined
+      );
+    });
+
+    it('handles null values in handler props', () => {
+      const propsWithNulls = {
+        ...defaultProps,
+        UserProfile: null,
+        openLaunchoutDialog: null,
+        logUsageMetrics: null
+      };
+
+      render(<UTPList {...propsWithNulls} />);
+      
+      const testTicket = { id: 'test-ticket' };
+      fireEvent.click(screen.getByTestId('case-details-button'));
+
+      expect(openingCaseDetailsHandler).toHaveBeenCalledWith(
+        testTicket,
+        propsWithNulls.customerProfile,
+        null,
+        null,
+        null
+      );
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('handles buildParams throwing an error', () => {
+      buildParams.mockImplementation(() => {
+        throw new Error('Build params error');
+      });
+
+      expect(() => render(<UTPList {...defaultProps} />))
+        .not.toThrow();
+    });
+
+    it('handles openingCaseDetailsHandler throwing an error', () => {
+      openingCaseDetailsHandler.mockImplementation(() => {
+        throw new Error('Handler error');
+      });
+
+      render(<UTPList {...defaultProps} />);
+      
+      expect(() => {
+        fireEvent.click(screen.getByTestId('case-details-button'));
+      }).not.toThrow();
+    });
+  });
+
+  describe('Component Updates', () => {
+    it('updates when customerProfile changes', () => {
+      const { rerender } = render(<UTPList {...defaultProps} />);
+      
+      const newCustomerProfile = { id: 'new-customer' };
+      rerender(<UTPList {...defaultProps} customerProfile={newCustomerProfile} />);
+
+      expect(buildParams).toHaveBeenCalledWith(
+        newCustomerProfile,
+        defaultProps.env,
+        defaultProps.isDark
+      );
+    });
+
+    it('updates when environment changes', () => {
+      const { rerender } = render(<UTPList {...defaultProps} />);
+      
+      rerender(<UTPList {...defaultProps} env="prod" />);
+
+      expect(buildParams).toHaveBeenCalledWith(
+        defaultProps.customerProfile,
+        'prod',
+        defaultProps.isDark
+      );
+    });
+  });
+}); 
