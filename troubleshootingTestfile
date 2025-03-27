@@ -1,746 +1,283 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import userEvent from '@testing-library/user-event';
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
-// Mock the static methods of TroubleShootingNewPage
-jest.mock('../TroubleShootingNewPage', () => ({
-  __esModule: true,
-  default: jest.fn(),
-  handleInputChange: jest.fn().mockImplementation((event) => ({
-    value: event.target.value
-  })),
-  handleOpenedChange: jest.fn(),
-  getIntentId: jest.fn(),
-  toggleContent: jest.fn(),
-  handleNRBNotification: jest.fn(),
-  handleModalClose: jest.fn(),
-  handleBackButton: jest.fn(),
-  handleErrorState: jest.fn(),
-  handleMapData: jest.fn(),
-  renderMessageModalBody: jest.fn(),
-  accordionHandler: jest.fn(),
-  noteAccordionHandler: jest.fn(),
-  handleSiteSurveyChange: jest.fn(),
-  handleOptionsChangeDigital: jest.fn(),
-  handleContinueButton: jest.fn(),
-  handleCancelButton: jest.fn(),
-  renderDescription: jest.fn(),
-  renderChecks: jest.fn(),
-  handleModalState: jest.fn(),
-  handleFeedbackFlags: jest.fn(),
-  handleDynamicCta: jest.fn(),
-  getRecommendedText: jest.fn(),
-  handleFeedbackClick: jest.fn(),
-  renderSubSection: jest.fn(),
-  renderSection: jest.fn(),
-  handleResumeEmailSend: jest.fn(),
-  renderNetworkCongestion: jest.fn(),
-  selectDeviceBannerEligibility: jest.fn(),
-  handleAsyncOperation: jest.fn(),
-  handleBackNavigation: jest.fn()
+// Mock any required dependencies
+jest.mock('react-router-dom', () => ({
+  useNavigate: () => jest.fn(),
+  useLocation: () => ({
+    pathname: '/troubleshooting',
+    state: {}
+  })
 }));
 
-// Mock props
-const mockFunctions = {
-  handleModalAction: jest.fn(),
-  handleButtonAction: jest.fn(),
-  handleOptionsChange: jest.fn(),
-  redirectToBAU: jest.fn(),
-  handleNetworkExtFlow: jest.fn(),
-  handleButtonClickDigital: jest.fn(),
-};
-
-const mockValues = {
-  troubleShootingInfo: {
-    ddata: {
-      output: {
-        pageContent: {
-          steps: []
-        }
-      }
-    }
-  },
-  context: {},
-  landingInfo: {}
-};
-
-// Mock window properties
-const mockWindow = {
-  isMVODigital: false,
-  troubleShootingJson: {
-    ddata: {
-      device: {}
-    }
-  }
-};
-
 describe('TroubleShootingNewPage', () => {
+  const mockProps = {
+    steps: [],
+    currentStep: {},
+    navHistory: [],
+    handleAction: jest.fn(),
+    handleButtonClick: jest.fn(),
+    handleOptionsChange: jest.fn()
+  };
+
   beforeEach(() => {
-    // Setup window mocks
-    Object.defineProperty(window, 'isMVODigital', {
-      value: mockWindow.isMVODigital,
-      writable: true
-    });
     jest.clearAllMocks();
   });
 
-  describe('Rendering', () => {
-    it('renders without crashing', () => {
-      render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={mockValues}
-        />
-      );
+  describe('Utility Functions', () => {
+    test('isEligibleForResumeEmail returns correct eligibility', () => {
+      const step = { type: 'email' };
+      const navHistory = ['step1', 'step2'];
+      expect(isEligibleForResumeEmail(step, navHistory)).toBeTruthy();
     });
 
-    it('renders with empty props', () => {
-      render(
-        <TroubleShootingNewPage
-          functions={{}}
-          values={{}}
-        />
-      );
-    });
-  });
-
-  describe('Button Actions', () => {
-    it('handles button clicks correctly', async () => {
-      const { getByTestId } = render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={{
-            ...mockValues,
-            troubleShootingInfo: {
-              ddata: {
-                output: {
-                  pageContent: {
-                    steps: [{
-                      buttons: [{
-                        id: 'test-button',
-                        label: 'Test Button'
-                      }]
-                    }]
-                  }
-                }
-              }
-            }
-          }}
-        />
-      );
-
-      const button = getByTestId('test-button');
-      fireEvent.click(button);
-
-      expect(mockFunctions.handleButtonAction).toHaveBeenCalled();
-    });
-
-    it('handles digital button clicks', async () => {
-      render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={mockValues}
-        />
-      );
-
-      // Simulate digital button click
-      const digitalButton = screen.getByTestId('digital-button');
-      fireEvent.click(digitalButton);
-
-      expect(mockFunctions.handleButtonClickDigital).toHaveBeenCalled();
-    });
-  });
-
-  describe('Modal Handling', () => {
-    it('renders modal when triggered', () => {
-      const { getByTestId } = render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={{
-            ...mockValues,
-            showModal: true,
-            modalParams: {
-              title: 'Test Modal',
-              body: 'Modal Content'
-            }
-          }}
-        />
-      );
-
-      expect(getByTestId('message-modal')).toBeInTheDocument();
-    });
-
-    it('handles modal actions', () => {
-      render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={{
-            ...mockValues,
-            showModal: true
-          }}
-        />
-      );
-
-      const modalButton = screen.getByTestId('modal-action-button');
-      fireEvent.click(modalButton);
-
-      expect(mockFunctions.handleModalAction).toHaveBeenCalled();
-    });
-  });
-
-  describe('Network Flow', () => {
-    it('handles network extension flow', async () => {
-      render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={mockValues}
-        />
-      );
-
-      const networkButton = screen.getByTestId('network-button');
-      fireEvent.click(networkButton);
-
-      await waitFor(() => {
-        expect(mockFunctions.handleNetworkExtFlow).toHaveBeenCalled();
+    test('buildSymptom creates correct symptom object', () => {
+      const text = 'Test Symptom';
+      const groupName = 'testGroup';
+      const radioValue = 'test';
+      const htmlContent = '<p>Test</p>';
+      
+      const result = buildSymptom(text, groupName, radioValue, htmlContent);
+      
+      expect(result).toEqual({
+        text: 'Test Symptom',
+        groupName: 'testGroup',
+        radioValue: 'test',
+        htmlContent: '<p>Test</p>'
       });
+    });
+  });
+
+  describe('Event Handlers', () => {
+    test('handleButtonClick calls appropriate functions', async () => {
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const button = getByTestId('action-button');
+      
+      await userEvent.click(button);
+      
+      expect(mockProps.handleButtonClick).toHaveBeenCalled();
+    });
+
+    test('handleOptionsChange updates selected options', () => {
+      const { getByRole } = render(<TroubleShootingNewPage {...mockProps} />);
+      const select = getByRole('combobox');
+      
+      fireEvent.change(select, { target: { value: 'option1' } });
+      
+      expect(mockProps.handleOptionsChange).toHaveBeenCalledWith(expect.any(Object));
+    });
+  });
+
+  describe('Rendering', () => {
+    test('renders description correctly', () => {
+      const stepWithDescription = {
+        description: 'Test Description'
+      };
+      
+      const { getByText } = render(
+        <TroubleShootingNewPage 
+          {...mockProps} 
+          currentStep={stepWithDescription}
+        />
+      );
+      
+      expect(getByText('Test Description')).toBeInTheDocument();
+    });
+
+    test('renders recommended tiles when available', () => {
+      const propsWithRecommendations = {
+        ...mockProps,
+        recommendedTiles: [
+          { title: 'Recommended 1', description: 'Description 1' }
+        ]
+      };
+      
+      const { getByText } = render(
+        <TroubleShootingNewPage {...propsWithRecommendations} />
+      );
+      
+      expect(getByText('Recommended 1')).toBeInTheDocument();
+    });
+  });
+
+  describe('Modal Functionality', () => {
+    test('message modal renders correctly', () => {
+      const modalParams = {
+        title: 'Test Modal',
+        message: 'Modal Message'
+      };
+      
+      const { getByText } = render(
+        <TroubleShootingNewPage 
+          {...mockProps}
+          showModal={true}
+          modalParams={modalParams}
+        />
+      );
+      
+      expect(getByText('Test Modal')).toBeInTheDocument();
+      expect(getByText('Modal Message')).toBeInTheDocument();
+    });
+
+    test('modal actions work correctly', async () => {
+      const handleModalAction = jest.fn();
+      const { getByText } = render(
+        <TroubleShootingNewPage 
+          {...mockProps}
+          showModal={true}
+          handleModalAction={handleModalAction}
+        />
+      );
+      
+      const actionButton = getByText('OK');
+      await userEvent.click(actionButton);
+      
+      expect(handleModalAction).toHaveBeenCalled();
+    });
+  });
+
+  describe('Navigation and Routing', () => {
+    test('redirectToBAU navigates correctly', async () => {
+      const navigate = jest.fn();
+      jest.spyOn(require('react-router-dom'), 'useNavigate').mockReturnValue(navigate);
+
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const redirectButton = getByTestId('bau-redirect');
+      
+      await userEvent.click(redirectButton);
+      
+      expect(navigate).toHaveBeenCalled();
     });
   });
 
   describe('Form Handling', () => {
-    it('handles option changes', () => {
-      render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={mockValues}
-        />
+    test('handles form submission correctly', async () => {
+      const onSubmit = jest.fn();
+      const { getByRole } = render(
+        <TroubleShootingNewPage {...mockProps} onSubmit={onSubmit} />
       );
-
-      const option = screen.getByTestId('option-select');
-      fireEvent.change(option, { target: { value: 'test-option' } });
-
-      expect(mockFunctions.handleOptionsChange).toHaveBeenCalled();
-    });
-  });
-
-  describe('Navigation', () => {
-    it('redirects to BAU when triggered', async () => {
-      render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={mockValues}
-        />
-      );
-
-      const redirectButton = screen.getByTestId('redirect-button');
-      fireEvent.click(redirectButton);
-
+      
+      const form = getByRole('form');
+      fireEvent.submit(form);
+      
       await waitFor(() => {
-        expect(mockFunctions.redirectToBAU).toHaveBeenCalled();
+        expect(onSubmit).toHaveBeenCalled();
       });
     });
   });
 
-  describe('Error Handling', () => {
-    it('handles missing steps data', () => {
-      render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={{
-            ...mockValues,
-            troubleShootingInfo: {
-              ddata: {
-                output: {
-                  pageContent: {
-                    steps: null
-                  }
-                }
-              }
-            }
-          }}
-        />
+  describe('Accordion Functionality', () => {
+    test('accordionHandler toggles accordion state', () => {
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const accordion = getByTestId('accordion-section');
+      
+      fireEvent.click(accordion);
+      expect(accordion).toHaveClass('expanded');
+      
+      fireEvent.click(accordion);
+      expect(accordion).not.toHaveClass('expanded');
+    });
+
+    test('noteAccordionHandler works correctly', () => {
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const noteAccordion = getByTestId('note-accordion');
+      
+      fireEvent.click(noteAccordion);
+      expect(noteAccordion).toHaveClass('expanded');
+    });
+  });
+
+  describe('Network Extension Flow', () => {
+    test('handleNetworkExtFlow processes network extension correctly', async () => {
+      const mockItem = {
+        type: 'network-extension',
+        data: { networkId: '123' }
+      };
+      
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const networkButton = getByTestId('network-ext-button');
+      
+      await userEvent.click(networkButton);
+      
+      expect(mockProps.handleAction).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'network-extension' })
       );
-
-      expect(screen.getByTestId('error-message')).toBeInTheDocument();
     });
   });
 
-  describe('Lifecycle Methods', () => {
-    it('updates when props change', () => {
-      const { rerender } = render(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={mockValues}
-        />
-      );
-
-      rerender(
-        <TroubleShootingNewPage
-          functions={mockFunctions}
-          values={{
-            ...mockValues,
-            troubleShootingInfo: {
-              ddata: {
-                output: {
-                  pageContent: {
-                    steps: [{
-                      id: 'new-step'
-                    }]
-                  }
-                }
-              }
-            }
-          }}
-        />
-      );
-
-      expect(screen.getByTestId('new-step')).toBeInTheDocument();
-    });
-  });
-});
-
-describe('TroubleShootingNewPage Additional Tests', () => {
-  describe('Helper Functions', () => {
-    it('tests isEligibleForResumeEmail', () => {
-      const step = { id: 'test-step' };
-      const navHistory = [{ id: 'test-step' }];
-      const result = TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory);
-      expect(result).toBeDefined();
-    });
-
-    it('tests renderMessageModalBody', () => {
-      const modalParams = {
-        body: 'Test body',
-        isHtml: true
-      };
-      const result = render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
-      expect(result.container).toHaveTextContent('Test body');
-    });
-
-    it('tests handleMapData', () => {
-      const mockEvent = {
-        target: {
-          getAttribute: jest.fn().mockReturnValue('test-value')
-        }
-      };
-      const setLongitude = jest.fn();
-      const setLatitude = jest.fn();
-      const setAddressLine = jest.fn();
-      const setBtnValue = jest.fn();
-
-      TroubleShootingNewPage.handleMapData(
-        mockEvent,
-        setLongitude,
-        setLatitude,
-        setAddressLine,
-        setBtnValue
-      );
-
-      expect(setLongitude).toHaveBeenCalled();
-      expect(setLatitude).toHaveBeenCalled();
-      expect(setAddressLine).toHaveBeenCalled();
-      expect(setBtnValue).toHaveBeenCalled();
-    });
-  });
-
-  describe('UI Element Handlers', () => {
-    it('tests accordionHandler', () => {
-      const mockEvent = {
-        currentTarget: {
-          classList: {
-            toggle: jest.fn()
-          },
-          nextElementSibling: {
-            style: {}
-          }
-        }
-      };
-      TroubleShootingNewPage.accordionHandler(mockEvent);
-      expect(mockEvent.currentTarget.classList.toggle).toHaveBeenCalled();
-    });
-
-    it('tests noteAccordionHandler', () => {
-      const mockEvent = {
-        currentTarget: {
-          classList: {
-            toggle: jest.fn()
-          },
-          nextElementSibling: {
-            style: {}
-          }
-        }
-      };
-      TroubleShootingNewPage.noteAccordionHandler(mockEvent);
-      expect(mockEvent.currentTarget.classList.toggle).toHaveBeenCalled();
-    });
-  });
-
-  describe('Form Handlers', () => {
-    it('tests handleSiteSurveyChange', () => {
-      const mockEvent = {
-        target: {
-          value: 'test-value'
-        }
-      };
-      const result = TroubleShootingNewPage.handleSiteSurveyChange(mockEvent);
-      expect(result).toBeDefined();
-    });
-
-    it('tests handleOptionsChangeDigital', () => {
-      const mockEvent = {
-        target: {
-          value: 'digital-option'
-        }
-      };
-      const result = TroubleShootingNewPage.handleOptionsChangeDigital(mockEvent);
-      expect(result).toBeDefined();
-    });
-  });
-
-  describe('Button Handlers', () => {
-    it('tests handleContinueButton', () => {
-      const result = TroubleShootingNewPage.handleContinueButton();
-      expect(result).toBeDefined();
-    });
-
-    it('tests handleCancelButton', () => {
-      const result = TroubleShootingNewPage.handleCancelButton();
-      expect(result).toBeDefined();
-    });
-  });
-
-  describe('Rendering Functions', () => {
-    it('tests renderDescription', () => {
-      const mockStep = {
-        description: 'Test description'
-      };
-      const result = render(TroubleShootingNewPage.renderDescription(mockStep, 0));
-      expect(result.container).toHaveTextContent('Test description');
-    });
-
-    it('tests renderChecks', () => {
-      const mockStep = {
-        checks: [
-          { title: 'Check 1' },
-          { title: 'Check 2' }
-        ]
-      };
-      const result = render(TroubleShootingNewPage.renderChecks(mockStep));
-      expect(result.container).toHaveTextContent('Check 1');
-      expect(result.container).toHaveTextContent('Check 2');
-    });
-  });
-
-  describe('State Management', () => {
-    it('tests handleModalState', () => {
-      const mockFlags = {
-        showModal: true,
-        modalTitle: 'Test Modal'
-      };
-      const result = TroubleShootingNewPage.handleModalState(mockFlags);
-      expect(result).toBeDefined();
-    });
-
-    it('tests handleFeedbackFlags', () => {
-      const mockFlags = {
-        showFeedback: true,
-        feedbackType: 'positive'
-      };
-      const result = TroubleShootingNewPage.handleFeedbackFlags(mockFlags);
-      expect(result).toBeDefined();
-    });
-  });
-});
-
-describe('TroubleShootingNewPage Complete Coverage', () => {
-  describe('Dynamic Content Handlers', () => {
-    it('tests handleDynamicCta', async () => {
+  describe('Email and SMS Functionality', () => {
+    test('handleSendEmail sends email correctly', async () => {
       const mockEvent = { preventDefault: jest.fn() };
-      const mockElement = { id: 'test-cta' };
+      const mockSubProcess = 'test-process';
       
-      await TroubleShootingNewPage.handleDynamicCta(mockEvent, mockElement);
-      expect(mockEvent.preventDefault).toHaveBeenCalled();
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const emailButton = getByTestId('send-email-button');
+      
+      await userEvent.click(emailButton);
+      
+      expect(mockProps.handleAction).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'send-email' })
+      );
     });
 
-    it('tests getRecommendedText', () => {
-      const result = TroubleShootingNewPage.getRecommendedText();
-      expect(result).toBeDefined();
-    });
-
-    it('tests handleFeedbackClick', () => {
-      const templateType = 'test-template';
-      TroubleShootingNewPage.handleFeedbackClick(templateType);
-      // Add appropriate expectations
-    });
-  });
-
-  describe('Section Rendering', () => {
-    it('tests renderSubSection', () => {
-      const mockSubSection = {
-        title: 'Test Subsection',
-        content: 'Test Content'
-      };
-      const result = render(TroubleShootingNewPage.renderSubSection(mockSubSection));
-      expect(result.container).toHaveTextContent('Test Subsection');
-    });
-
-    it('tests renderSection', () => {
-      const mockSection = {
-        title: 'Test Section',
-        content: 'Test Content'
-      };
-      const result = render(TroubleShootingNewPage.renderSection(mockSection, false));
-      expect(result.container).toHaveTextContent('Test Section');
+    test('handleSmsClick processes SMS correctly', async () => {
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const smsButton = getByTestId('sms-button');
+      
+      await userEvent.click(smsButton);
+      
+      expect(mockProps.handleAction).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'send-sms' })
+      );
     });
   });
 
-  describe('Network and Email Handling', () => {
-    it('tests handleResumeEmailSend', async () => {
-      const mockPayload = { email: 'test@test.com' };
-      await TroubleShootingNewPage.handleResumeEmailSend(mockPayload);
-      // Add appropriate expectations
+  describe('Feedback Handling', () => {
+    test('triggerRecommendFeedBack submits feedback correctly', async () => {
+      const mockRecommended = true;
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const feedbackButton = getByTestId('feedback-button');
+      
+      await userEvent.click(feedbackButton);
+      
+      expect(mockProps.handleAction).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'feedback', recommended: true })
+      );
     });
+  });
 
-    it('tests renderNetworkCongestion', () => {
-      const mockData = [
-        ['Header 1', 'Header 2'],
-        ['Data 1', 'Data 2']
+  describe('Device Selection', () => {
+    test('handleMulSelDeviceOptionsChange updates device selection', () => {
+      const mockMacAddress = '00:11:22:33:44:55';
+      const { getByTestId } = render(<TroubleShootingNewPage {...mockProps} />);
+      const deviceCheckbox = getByTestId('device-checkbox');
+      
+      fireEvent.click(deviceCheckbox);
+      
+      expect(mockProps.handleOptionsChange).toHaveBeenCalledWith(
+        expect.objectContaining({ macAddress: mockMacAddress })
+      );
+    });
+  });
+
+  describe('Network Congestion', () => {
+    test('renderNetworkCongestion displays congestion data correctly', () => {
+      const mockCongestionData = [
+        ['Header1', 'Header2'],
+        ['Data1', 'Data2']
       ];
-      const result = render(TroubleShootingNewPage.renderNetworkCongestion(mockData));
-      expect(result.container).toHaveTextContent('Header 1');
-    });
-  });
-
-  describe('Device Banner', () => {
-    it('tests selectDeviceBannerEligibility', () => {
-      const mockStep = {
-        deviceBanner: true,
-        conditions: []
-      };
-      const result = TroubleShootingNewPage.selectDeviceBannerEligibility(mockStep);
-      expect(result).toBeDefined();
-    });
-  });
-
-  describe('Error Handling Branches', () => {
-    it('handles null values in renderSection', () => {
-      const result = render(TroubleShootingNewPage.renderSection(null, false));
-      expect(result.container).toBeDefined();
-    });
-
-    it('handles network errors in handleResumeEmailSend', async () => {
-      const mockError = new Error('Network Error');
-      jest.spyOn(console, 'error').mockImplementation(() => {});
       
-      await expect(TroubleShootingNewPage.handleResumeEmailSend({}))
-        .rejects
-        .toThrow('Network Error');
-    });
-
-    it('handles invalid data in renderNetworkCongestion', () => {
-      const result = render(TroubleShootingNewPage.renderNetworkCongestion(null));
-      expect(result.container).toBeDefined();
-    });
-  });
-});
-
-describe('Remaining Function Coverage', () => {
-  it('tests handleInputChange', () => {
-    const mockEvent = {
-      target: { value: 'test' }
-    };
-    const result = TroubleShootingNewPage.handleInputChange(mockEvent);
-    expect(result).toEqual({ value: 'test' });
-  });
-
-  it('tests handleOpenedChange', () => {
-    const result = TroubleShootingNewPage.handleOpenedChange(true);
-    expect(result).toBeDefined();
-  });
-
-  it('tests getIntentId', () => {
-    const result = TroubleShootingNewPage.getIntentId();
-    expect(result).toBeDefined();
-  });
-
-  it('tests toggleContent', () => {
-    const mockEvent = { preventDefault: jest.fn() };
-    const result = TroubleShootingNewPage.toggleContent(mockEvent, true);
-    expect(result).toBeDefined();
-  });
-
-  it('tests handleNRBNotification', () => {
-    const result = TroubleShootingNewPage.handleNRBNotification();
-    expect(result).toBeDefined();
-  });
-
-  it('tests handleModalClose', () => {
-    const result = TroubleShootingNewPage.handleModalClose();
-    expect(result).toBeDefined();
-  });
-
-  it('tests handleBackButton', () => {
-    const mockHistory = { goBack: jest.fn() };
-    TroubleShootingNewPage.handleBackButton(mockHistory);
-    expect(mockHistory.goBack).toHaveBeenCalled();
-  });
-
-  it('tests handleErrorState', () => {
-    const mockError = new Error('Test Error');
-    const result = TroubleShootingNewPage.handleErrorState(mockError);
-    expect(result).toBeDefined();
-  });
-});
-
-describe('Remaining Statement Coverage', () => {
-  it('tests error handling in handleDynamicCta', async () => {
-    const mockEvent = { preventDefault: jest.fn() };
-    const mockElement = null;
-    
-    try {
-      await TroubleShootingNewPage.handleDynamicCta(mockEvent, mockElement);
-    } catch (error) {
-      expect(error).toBeDefined();
-    }
-  });
-
-  it('tests error state in handleResumeEmailSend', async () => {
-    const mockPayload = null;
-    try {
-      await TroubleShootingNewPage.handleResumeEmailSend(mockPayload);
-    } catch (error) {
-      expect(error).toBeDefined();
-    }
-  });
-
-  it('tests initialization with invalid props', () => {
-    render(
-      <TroubleShootingNewPage
-        functions={null}
-        values={null}
-      />
-    );
-    expect(screen.getByTestId('error-state')).toBeInTheDocument();
-  });
-});
-
-describe('Final Coverage Tests', () => {
-  it('tests error boundary scenarios', async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    
-    try {
-      await TroubleShootingNewPage.handleResumeEmailSend({
-        email: null,
-        data: undefined
-      });
-    } catch (error) {
-      expect(error.message).toBeDefined();
-    }
-  });
-
-  // Remaining function (1.92%)
-  it('tests handleAsyncOperation', async () => {
-    const mockData = { id: 'test' };
-    const result = await TroubleShootingNewPage.handleAsyncOperation(mockData);
-    expect(result).toBeDefined();
-  });
-
-  // Remaining branches (3.51%)
-  it('tests edge case conditions', () => {
-    const mockStep = {
-      deviceBanner: true,
-      conditions: [
-        { type: 'complex', value: null },
-        { type: 'nested', value: undefined }
-      ]
-    };
-    const result = TroubleShootingNewPage.selectDeviceBannerEligibility(mockStep);
-    expect(result).toBeDefined();
-  });
-
-  // Remaining statements (2.11%)
-  it('tests complex error handling in renderNetworkCongestion', () => {
-    const invalidData = [[]];
-    const result = render(TroubleShootingNewPage.renderNetworkCongestion(invalidData));
-    expect(result.container).toBeDefined();
-  });
-
-  // Remaining statement (1.05%)
-  it('tests edge case in handleResumeEmailSend', async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    
-    try {
-      await TroubleShootingNewPage.handleResumeEmailSend({
-        email: '',
-        type: 'invalid'
-      });
-    } catch (error) {
-      expect(error.message).toBeDefined();
-    }
-  });
-});
-
-describe('Edge Cases and Error Handling', () => {
-  beforeEach(() => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('handles null values in all methods', () => {
-    // Combine all null check tests
-    const results = [
-      TroubleShootingNewPage.handleMapData({ target: { getAttribute: () => null } }),
-      render(TroubleShootingNewPage.renderMessageModalBody({ body: null, isHtml: false })),
-      render(TroubleShootingNewPage.renderChecks({ checks: null }))
-    ];
-    
-    results.forEach(result => {
-      expect(result).toBeDefined();
+      const { getByText } = render(
+        <TroubleShootingNewPage 
+          {...mockProps}
+          networkCongestionData={mockCongestionData}
+        />
+      );
+      
+      expect(getByText('Header1')).toBeInTheDocument();
+      expect(getByText('Data1')).toBeInTheDocument();
     });
   });
-
-  it('handles all error scenarios', async () => {
-    const errorScenarios = [
-      { email: '', type: 'invalid' },
-      { email: null, data: undefined },
-      { email: '', type: null, data: undefined }
-    ];
-
-    for (const payload of errorScenarios) {
-      try {
-        await TroubleShootingNewPage.handleResumeEmailSend(payload);
-      } catch (error) {
-        expect(error.message).toBeDefined();
-      }
-    }
-  });
-});
-
-describe('Async Operations', () => {
-  it('handles all async operations correctly', async () => {
-    await expect(TroubleShootingNewPage.handleAsyncOperation({ id: 'test' }))
-      .resolves
-      .toBeDefined();
-
-    await expect(TroubleShootingNewPage.handleDynamicCta(
-      { preventDefault: jest.fn() },
-      { id: 'test-cta' }
-    )).resolves.toBeDefined();
-  });
-});
-
-afterEach(() => {
-  jest.clearAllMocks();
-  jest.restoreAllMocks();
-});
-
-const handleAsyncTest = async (testFn) => {
-  try {
-    await testFn();
-  } catch (error) {
-    expect(error).toBeDefined();
-  }
-};
+}); 
