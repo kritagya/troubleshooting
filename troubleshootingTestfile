@@ -3,14 +3,21 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
-// Mock any required dependencies
-jest.mock('react-router-dom', () => ({
-  useNavigate: () => jest.fn(),
-  useLocation: () => ({
-    pathname: '/troubleshooting',
-    state: {}
-  })
-}));
+// Mock data for additional info steps
+const mockAdditionalInfoSteps = [
+  {
+    id: 'step1',
+    title: 'Additional Info Step 1',
+    description: 'Description for step 1',
+    type: 'info'
+  },
+  {
+    id: 'step2',
+    title: 'Additional Info Step 2',
+    description: 'Description for step 2',
+    type: 'warning'
+  }
+];
 
 describe('TroubleShootingNewPage', () => {
   const mockProps = {
@@ -19,7 +26,8 @@ describe('TroubleShootingNewPage', () => {
     navHistory: [],
     handleAction: jest.fn(),
     handleButtonClick: jest.fn(),
-    handleOptionsChange: jest.fn()
+    handleOptionsChange: jest.fn(),
+    additionalInfoSteps: mockAdditionalInfoSteps
   };
 
   beforeEach(() => {
@@ -278,6 +286,47 @@ describe('TroubleShootingNewPage', () => {
       
       expect(getByText('Header1')).toBeInTheDocument();
       expect(getByText('Data1')).toBeInTheDocument();
+    });
+  });
+
+  describe('Additional Info Steps', () => {
+    test('renders additional info steps correctly', () => {
+      const { getByText } = render(
+        <TroubleShootingNewPage {...mockProps} />
+      );
+      
+      expect(getByText('Additional Info Step 1')).toBeInTheDocument();
+      expect(getByText('Description for step 1')).toBeInTheDocument();
+      expect(getByText('Additional Info Step 2')).toBeInTheDocument();
+      expect(getByText('Description for step 2')).toBeInTheDocument();
+    });
+
+    test('handles additional info step interactions', async () => {
+      const { getByTestId } = render(
+        <TroubleShootingNewPage {...mockProps} />
+      );
+      
+      const step1Button = getByTestId('additional-info-step-1');
+      await userEvent.click(step1Button);
+      
+      expect(mockProps.handleAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'info-step',
+          stepId: 'step1'
+        })
+      );
+    });
+
+    test('displays correct step type indicators', () => {
+      const { container } = render(
+        <TroubleShootingNewPage {...mockProps} />
+      );
+      
+      const infoIcon = container.querySelector('.info-icon');
+      const warningIcon = container.querySelector('.warning-icon');
+      
+      expect(infoIcon).toBeInTheDocument();
+      expect(warningIcon).toBeInTheDocument();
     });
   });
 }); 
