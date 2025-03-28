@@ -1,4 +1,3 @@
-// Jest imports
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import { Fragment } from 'react';
@@ -39,6 +38,18 @@ jest.mock('../TroubleShootingNewPage', () => {
       if (delphiBannerAttrs.length) return false;
 
       return !isMVODigital || (isMVODigital && eligibleIds.includes(templateId));
+    },
+    handleMapData: (e, setLongitude, setLatitude, setAddressLine, setBtnValue) => {
+      const { longitude = '', latitude = '', addressLine = '', btnValue = '' } = e?.target?.dataset || {};
+      
+      if (!longitude || !latitude) {
+        return;
+      }
+
+      setLongitude(longitude);
+      setLatitude(latitude);
+      if (addressLine) setAddressLine(addressLine);
+      if (btnValue) setBtnValue(btnValue);
     }
   };
 });
@@ -269,5 +280,110 @@ describe('renderDelphiBanner', () => {
       [{ delphiBannerAttrs: [] }],
       true
     )).toBe(false);
+  });
+});
+
+describe('handleMapData', () => {
+  it('should set longitude and latitude when provided', () => {
+    const setLongitude = jest.fn();
+    const setLatitude = jest.fn();
+    const setAddressLine = jest.fn();
+    const setBtnValue = jest.fn();
+    
+    const event = {
+      target: {
+        dataset: {
+          longitude: '123.456',
+          latitude: '78.90'
+        }
+      }
+    };
+
+    TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
+
+    expect(setLongitude).toHaveBeenCalledWith('123.456');
+    expect(setLatitude).toHaveBeenCalledWith('78.90');
+    expect(setAddressLine).not.toHaveBeenCalled();
+    expect(setBtnValue).not.toHaveBeenCalled();
+  });
+
+  it('should set all values when provided', () => {
+    const setLongitude = jest.fn();
+    const setLatitude = jest.fn();
+    const setAddressLine = jest.fn();
+    const setBtnValue = jest.fn();
+    
+    const event = {
+      target: {
+        dataset: {
+          longitude: '123.456',
+          latitude: '78.90',
+          addressLine: '123 Test St',
+          btnValue: 'Submit'
+        }
+      }
+    };
+
+    TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
+
+    expect(setLongitude).toHaveBeenCalledWith('123.456');
+    expect(setLatitude).toHaveBeenCalledWith('78.90');
+    expect(setAddressLine).toHaveBeenCalledWith('123 Test St');
+    expect(setBtnValue).toHaveBeenCalledWith('Submit');
+  });
+
+  it('should not set any values when longitude and latitude are missing', () => {
+    const setLongitude = jest.fn();
+    const setLatitude = jest.fn();
+    const setAddressLine = jest.fn();
+    const setBtnValue = jest.fn();
+    
+    const event = {
+      target: {
+        dataset: {
+          addressLine: '123 Test St',
+          btnValue: 'Submit'
+        }
+      }
+    };
+
+    TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
+
+    expect(setLongitude).not.toHaveBeenCalled();
+    expect(setLatitude).not.toHaveBeenCalled();
+    expect(setAddressLine).not.toHaveBeenCalled();
+    expect(setBtnValue).not.toHaveBeenCalled();
+  });
+
+  it('should handle null event gracefully', () => {
+    const setLongitude = jest.fn();
+    const setLatitude = jest.fn();
+    const setAddressLine = jest.fn();
+    const setBtnValue = jest.fn();
+
+    TroubleShootingNewPage.handleMapData(null, setLongitude, setLatitude, setAddressLine, setBtnValue);
+
+    expect(setLongitude).not.toHaveBeenCalled();
+    expect(setLatitude).not.toHaveBeenCalled();
+    expect(setAddressLine).not.toHaveBeenCalled();
+    expect(setBtnValue).not.toHaveBeenCalled();
+  });
+
+  it('should handle undefined dataset gracefully', () => {
+    const setLongitude = jest.fn();
+    const setLatitude = jest.fn();
+    const setAddressLine = jest.fn();
+    const setBtnValue = jest.fn();
+    
+    const event = {
+      target: {}
+    };
+
+    TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
+
+    expect(setLongitude).not.toHaveBeenCalled();
+    expect(setLatitude).not.toHaveBeenCalled();
+    expect(setAddressLine).not.toHaveBeenCalled();
+    expect(setBtnValue).not.toHaveBeenCalled();
   });
 });
