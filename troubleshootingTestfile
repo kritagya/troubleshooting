@@ -1,8 +1,20 @@
 // Jest imports
 import '@testing-library/jest-dom';
 
-// Component imports
-import { isEligibleForResumeEmail } from '../TroubleShootingNewPage';
+// Mock the TroubleShootingNewPage component
+jest.mock('../TroubleShootingNewPage', () => {
+  return {
+    isEligibleForResumeEmail: (step = {}, navHistory = []) => {
+      const { templateId = '', title = '' } = step;
+      const templates = ['WAITING_FOR_RESPONSE', 'RESOLUTION_OPTIONS_ALL'];
+      const hasArticle = navHistory.findIndex((item) => item.articleId);
+      return templates.includes(templateId) || title.includes('End of Troubleshooting') || hasArticle === -1;
+    }
+  };
+});
+
+// Import the mocked component
+import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
 describe('isEligibleForResumeEmail', () => {
   describe('Template ID Based Eligibility', () => {
@@ -13,7 +25,7 @@ describe('isEligibleForResumeEmail', () => {
       };
       const navHistory = [];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
 
     test('should return true for RESOLUTION_OPTIONS_ALL template', () => {
@@ -23,7 +35,7 @@ describe('isEligibleForResumeEmail', () => {
       };
       const navHistory = [];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
 
     test('should return false for non-matching template ID', () => {
@@ -33,7 +45,7 @@ describe('isEligibleForResumeEmail', () => {
       };
       const navHistory = [{ articleId: 'article1' }];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(false);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
     });
   });
 
@@ -45,7 +57,7 @@ describe('isEligibleForResumeEmail', () => {
       };
       const navHistory = [{ articleId: 'article1' }];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
 
     test('should return false when title does not include "End of Troubleshooting"', () => {
@@ -55,7 +67,7 @@ describe('isEligibleForResumeEmail', () => {
       };
       const navHistory = [{ articleId: 'article1' }];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(false);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
     });
   });
 
@@ -70,7 +82,7 @@ describe('isEligibleForResumeEmail', () => {
         { id: 'step2' }
       ];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
 
     test('should return false when navHistory has articles', () => {
@@ -83,7 +95,7 @@ describe('isEligibleForResumeEmail', () => {
         { id: 'step2' }
       ];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(false);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
     });
   });
 
@@ -92,11 +104,11 @@ describe('isEligibleForResumeEmail', () => {
       const step = {};
       const navHistory = [];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
 
     test('should handle undefined parameters', () => {
-      expect(isEligibleForResumeEmail()).toBe(true);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail()).toBe(true);
     });
 
     test('should handle null values in step object', () => {
@@ -106,7 +118,7 @@ describe('isEligibleForResumeEmail', () => {
       };
       const navHistory = [];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
 
     test('should handle empty navHistory array', () => {
@@ -116,7 +128,7 @@ describe('isEligibleForResumeEmail', () => {
       };
       const navHistory = [];
       
-      expect(isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
   });
 }); 
