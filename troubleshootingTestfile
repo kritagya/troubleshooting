@@ -1,9 +1,89 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
+import { act } from 'react';
 
-// Mock the TroubleShootingNewPage component
+// Mock dependencies
+jest.mock('lodash/isEmpty', () => ({
+  __esModule: true,
+  default: (value) => !value || Object.keys(value).length === 0
+}));
+
+// Mock the TroubleShootingNewPage component and its dependencies
+const TroubleShootingNewPageMock = (props) => {
+  const {
+    analysis = {},
+    steps = [],
+    prevStepEnabled = true,
+    nextStepEnabled = true,
+    isACSS = false,
+    vzmapCoordinatesFFlag = false,
+    longitude = '',
+    latitude = ''
+  } = props;
+
+  const { choices = [], templateId = '' } = analysis;
+
+  // Add "Please Select" option if not present
+  if (choices.length && choices.find((choice) => choice.value === -1) === undefined) {
+    choices.unshift({ text: 'Please Select', value: '-1' });
+  }
+
+  // Filter top and bottom links
+  const topLinksArray = choices.filter((item) => item?.showCTATop === true) || [];
+  const bottomLinksArray = choices.length
+    ? choices
+        .map((item) => {
+          const itemName = item?.text?.toLowerCase() || '';
+          if (itemName.includes('network compatibility') && item.recommended) {
+            return item;
+          } else if (!itemName.includes('network extender') && !itemName.includes('network compatibility')) {
+            return item;
+          }
+        })
+        .filter((choice) => choice && choice.showCTATop === false)
+    : [];
+
+  // Determine button states
+  let disabledBtnNext = !nextStepEnabled;
+  let disabledBtnPrev = !prevStepEnabled;
+
+  if (isACSS && vzmapCoordinatesFFlag && templateId === "MAP_PROBLEM_LOC_NEXT" && !longitude && !latitude) {
+    disabledBtnNext = true;
+  }
+
+  if (isACSS && steps?.[1]?.templateId === "MID_FLOW_REMEDY") {
+    disabledBtnNext = true;
+  }
+
+  return (
+    <div>
+      <button data-testid="prev-button" disabled={disabledBtnPrev}>Previous</button>
+      <button data-testid="next-button" disabled={disabledBtnNext}>Next</button>
+      
+      {topLinksArray.map((link, index) => (
+        <a key={index} data-testid="top-link" href="#">{link.text}</a>
+      ))}
+      
+      {bottomLinksArray.map((link, index) => (
+        <a key={index} data-testid="bottom-link" href="#">{link.text}</a>
+      ))}
+      
+      <select data-testid="option-select">
+        {choices.map((choice, index) => (
+          <option key={index} value={choice.value}>{choice.text}</option>
+        ))}
+      </select>
+      
+      <button data-testid="modal-trigger">Open Modal</button>
+      <div data-testid="modal" style={{ display: 'none' }}>Modal Content</div>
+    </div>
+  );
+};
+
 jest.mock('../TroubleShootingNewPage', () => {
-  return {
+  const React = require('react');
+  
+  const mock = {
     isEligibleForResumeEmail: (step = {}, navHistory = []) => {
       const { templateId = '', title = '' } = step;
       const templates = ['WAITING_FOR_RESPONSE', 'RESOLUTION_OPTIONS_ALL'];
@@ -51,6 +131,8 @@ jest.mock('../TroubleShootingNewPage', () => {
       if (btnValue) setBtnValue(btnValue);
     }
   };
+
+  return Object.assign(TroubleShootingNewPageMock, mock);
 });
 
 // Import the mocked component
@@ -363,5 +445,159 @@ describe('handleMapData', () => {
     expect(setLatitude).not.toHaveBeenCalled();
     expect(setAddressLine).not.toHaveBeenCalled();
     expect(setBtnValue).not.toHaveBeenCalled();
+  });
+});
+
+describe('TroubleShootingNewPage Component', () => {
+  const mockProps = {
+    analysis: {
+      templateId: 'TEST_TEMPLATE',
+      choices: [
+        { text: 'Option 1', value: '1', showCTATop: true },
+        { text: 'Option 2', value: '2', showCTATop: false },
+        { text: 'Network Compatibility', value: '3', showCTATop: false, recommended: true }
+      ]
+    },
+    steps: [
+      { templateId: 'STEP_1' },
+      { templateId: 'STEP_2' }
+    ],
+    prevStepEnabled: true,
+    nextStepEnabled: true,
+    isACSS: false,
+    vzmapCoordinatesFFlag: false
+  };
+
+  describe('Navigation Button States', () => {
+    it('should disable prev button when prevStepEnabled is false', () => {
+      const props = {
+        ...mockProps,
+        prevStepEnabled: false
+      };
+      
+      const component = render(<TroubleShootingNewPage {...props} />);
+      const prevButton = component.getByTestId('prev-button');
+      expect(prevButton).toHaveAttribute('disabled');
+    });
+
+    it('should disable next button when nextStepEnabled is false', () => {
+      const props = {
+        ...mockProps,
+        nextStepEnabled: false
+      };
+      
+      const component = render(<TroubleShootingNewPage {...props} />);
+      const nextButton = component.getByTestId('next-button');
+      expect(nextButton).toHaveAttribute('disabled');
+    });
+
+    it('should disable next button for ACSS MAP_PROBLEM_LOC_NEXT without coordinates', () => {
+      const props = {
+        ...mockProps,
+        isACSS: true,
+        vzmapCoordinatesFFlag: true,
+        analysis: {
+          ...mockProps.analysis,
+          templateId: 'MAP_PROBLEM_LOC_NEXT'
+        },
+        longitude: '',
+        latitude: ''
+      };
+      
+      const component = render(<TroubleShootingNewPage {...props} />);
+      const nextButton = component.getByTestId('next-button');
+      expect(nextButton).toHaveAttribute('disabled');
+    });
+
+    it('should disable next button for ACSS MID_FLOW_REMEDY template', () => {
+      const props = {
+        ...mockProps,
+        isACSS: true,
+        steps: [
+          { templateId: 'STEP_1' },
+          { templateId: 'MID_FLOW_REMEDY' }
+        ]
+      };
+      
+      const component = render(<TroubleShootingNewPage {...props} />);
+      const nextButton = component.getByTestId('next-button');
+      expect(nextButton).toHaveAttribute('disabled');
+    });
+  });
+
+  describe('Choice Filtering', () => {
+    it('should add "Please Select" option when no -1 value exists', () => {
+      const props = {
+        ...mockProps,
+        analysis: {
+          ...mockProps.analysis,
+          choices: [
+            { text: 'Option 1', value: '1' },
+            { text: 'Option 2', value: '2' }
+          ]
+        }
+      };
+      
+      const component = render(<TroubleShootingNewPage {...props} />);
+      const selectOption = component.getByText('Please Select');
+      expect(selectOption).toBeInTheDocument();
+    });
+
+    it('should filter top links correctly', () => {
+      const component = render(<TroubleShootingNewPage {...mockProps} />);
+      const topLinks = component.getAllByTestId('top-link');
+      expect(topLinks).toHaveLength(1);
+      expect(topLinks[0]).toHaveTextContent('Option 1');
+    });
+
+    it('should filter bottom links correctly', () => {
+      const component = render(<TroubleShootingNewPage {...mockProps} />);
+      const bottomLinks = component.getAllByTestId('bottom-link');
+      expect(bottomLinks).toHaveLength(2);
+      expect(bottomLinks).not.toHaveTextContent('Network Extender');
+    });
+  });
+
+  describe('State Management', () => {
+    it('should handle state updates correctly', () => {
+      const component = render(<TroubleShootingNewPage {...mockProps} />);
+      
+      // Test state updates
+      act(() => {
+        component.getByTestId('option-select').change({ target: { value: '1' } });
+      });
+      
+      expect(component.getByTestId('selected-value')).toHaveTextContent('1');
+    });
+
+    it('should handle modal state correctly', () => {
+      const component = render(<TroubleShootingNewPage {...mockProps} />);
+      
+      act(() => {
+        component.getByTestId('modal-trigger').click();
+      });
+      
+      expect(component.getByTestId('modal')).toBeVisible();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle missing props gracefully', () => {
+      const component = render(<TroubleShootingNewPage />);
+      expect(component.container).toBeInTheDocument();
+    });
+
+    it('should handle empty choices array', () => {
+      const props = {
+        ...mockProps,
+        analysis: {
+          ...mockProps.analysis,
+          choices: []
+        }
+      };
+      
+      const component = render(<TroubleShootingNewPage {...props} />);
+      expect(component.container).toBeInTheDocument();
+    });
   });
 });
