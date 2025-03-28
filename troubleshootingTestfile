@@ -1,5 +1,6 @@
 // Jest imports
 import '@testing-library/jest-dom';
+import { shallow } from 'enzyme';
 
 // Mock the TroubleShootingNewPage component
 jest.mock('../TroubleShootingNewPage', () => {
@@ -9,6 +10,9 @@ jest.mock('../TroubleShootingNewPage', () => {
       const templates = ['WAITING_FOR_RESPONSE', 'RESOLUTION_OPTIONS_ALL'];
       const hasArticle = navHistory.findIndex((item) => item.articleId);
       return templates.includes(templateId) || title.includes('End of Troubleshooting') || hasArticle === -1;
+    },
+    renderMessageModalBody: (modalParams) => {
+      // Implementation of renderMessageModalBody method
     }
   };
 });
@@ -130,5 +134,59 @@ describe('isEligibleForResumeEmail', () => {
       
       expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
     });
+  });
+});
+
+describe('renderMessageModalBody', () => {
+  it('should render both heading and description when provided', () => {
+    const modalParams = {
+      heading: 'Test Heading',
+      description: 'Test Description'
+    };
+
+    const wrapper = shallow(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+    
+    expect(wrapper.find('Title').exists()).toBe(true);
+    expect(wrapper.find('Title').find('TextWithHtml').prop('children')).toBe('Test Heading');
+    expect(wrapper.find('Body').exists()).toBe(true);
+    expect(wrapper.find('Body').find('TextWithHtml').prop('children')).toBe('Test Description');
+    expect(wrapper.find('SpacerDiv').prop('height')).toBe('20px');
+  });
+
+  it('should render only heading when description is not provided', () => {
+    const modalParams = {
+      heading: 'Test Heading'
+    };
+
+    const wrapper = shallow(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+    
+    expect(wrapper.find('Title').exists()).toBe(true);
+    expect(wrapper.find('Title').find('TextWithHtml').prop('children')).toBe('Test Heading');
+    expect(wrapper.find('Body').exists()).toBe(false);
+    expect(wrapper.find('SpacerDiv').exists()).toBe(true);
+  });
+
+  it('should render only description when heading is not provided', () => {
+    const modalParams = {
+      description: 'Test Description'
+    };
+
+    const wrapper = shallow(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+    
+    expect(wrapper.find('Title').exists()).toBe(false);
+    expect(wrapper.find('SpacerDiv').exists()).toBe(false);
+    expect(wrapper.find('Body').exists()).toBe(true);
+    expect(wrapper.find('Body').find('TextWithHtml').prop('children')).toBe('Test Description');
+  });
+
+  it('should render empty fragment when neither heading nor description is provided', () => {
+    const modalParams = {};
+
+    const wrapper = shallow(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+    
+    expect(wrapper.find('Title').exists()).toBe(false);
+    expect(wrapper.find('Body').exists()).toBe(false);
+    expect(wrapper.find('SpacerDiv').exists()).toBe(false);
+    expect(wrapper.children()).toHaveLength(0);
   });
 }); 
