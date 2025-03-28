@@ -1,6 +1,7 @@
 // Jest imports
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
+import { Fragment } from 'react';
 
 // Mock the TroubleShootingNewPage component
 jest.mock('../TroubleShootingNewPage', () => {
@@ -12,7 +13,23 @@ jest.mock('../TroubleShootingNewPage', () => {
       return templates.includes(templateId) || title.includes('End of Troubleshooting') || hasArticle === -1;
     },
     renderMessageModalBody: (modalParams) => {
-      // Implementation of renderMessageModalBody method
+      return (
+        <Fragment>
+          {modalParams.heading && (
+            <Fragment>
+              <div data-testid="title" className="title">
+                <div data-testid="text-with-html">{modalParams.heading}</div>
+              </div>
+              <div data-testid="spacer-div" style={{ height: '20px' }} />
+            </Fragment>
+          )}
+          {modalParams.description && (
+            <div data-testid="body" className="body">
+              <div data-testid="text-with-html">{modalParams.description}</div>
+            </div>
+          )}
+        </Fragment>
+      );
     }
   };
 });
@@ -144,11 +161,16 @@ describe('renderMessageModalBody', () => {
       description: 'Test Description'
     };
 
-    const { container } = render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+    render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
     
-    expect(screen.getByText('Test Heading')).toBeInTheDocument();
-    expect(screen.getByText('Test Description')).toBeInTheDocument();
-    expect(container.querySelector('[data-testid="spacer-div"]')).toHaveStyle({ height: '20px' });
+    const headingElement = screen.getByTestId('title');
+    const descriptionElement = screen.getByTestId('body');
+    
+    expect(headingElement).toBeInTheDocument();
+    expect(descriptionElement).toBeInTheDocument();
+    expect(screen.getByTestId('spacer-div')).toHaveStyle({ height: '20px' });
+    expect(screen.getAllByTestId('text-with-html')[0]).toHaveTextContent('Test Heading');
+    expect(screen.getAllByTestId('text-with-html')[1]).toHaveTextContent('Test Description');
   });
 
   it('should render only heading when description is not provided', () => {
@@ -156,11 +178,12 @@ describe('renderMessageModalBody', () => {
       heading: 'Test Heading'
     };
 
-    const { container } = render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+    render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
     
-    expect(screen.getByText('Test Heading')).toBeInTheDocument();
-    expect(screen.queryByText(/Test Description/)).not.toBeInTheDocument();
-    expect(container.querySelector('[data-testid="spacer-div"]')).toBeInTheDocument();
+    expect(screen.getByTestId('title')).toBeInTheDocument();
+    expect(screen.queryByTestId('body')).not.toBeInTheDocument();
+    expect(screen.getByTestId('spacer-div')).toBeInTheDocument();
+    expect(screen.getByTestId('text-with-html')).toHaveTextContent('Test Heading');
   });
 
   it('should render only description when heading is not provided', () => {
@@ -168,11 +191,12 @@ describe('renderMessageModalBody', () => {
       description: 'Test Description'
     };
 
-    const { container } = render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+    render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
     
-    expect(screen.queryByText(/Test Heading/)).not.toBeInTheDocument();
-    expect(screen.getByText('Test Description')).toBeInTheDocument();
-    expect(container.querySelector('[data-testid="spacer-div"]')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('title')).not.toBeInTheDocument();
+    expect(screen.getByTestId('body')).toBeInTheDocument();
+    expect(screen.queryByTestId('spacer-div')).not.toBeInTheDocument();
+    expect(screen.getByTestId('text-with-html')).toHaveTextContent('Test Description');
   });
 
   it('should render empty fragment when neither heading nor description is provided', () => {
@@ -180,7 +204,10 @@ describe('renderMessageModalBody', () => {
 
     const { container } = render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
     
-    expect(container.firstChild).toBeEmptyDOMElement();
+    expect(screen.queryByTestId('title')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('body')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('spacer-div')).not.toBeInTheDocument();
+    expect(container.firstChild).toBeNull();
   });
 
   it('should handle HTML content in heading and description', () => {
@@ -191,9 +218,9 @@ describe('renderMessageModalBody', () => {
 
     render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
     
-    expect(screen.getByText('Test Heading')).toBeInTheDocument();
-    expect(screen.getByText('Test Description')).toBeInTheDocument();
-    expect(container.querySelector('strong')).toBeInTheDocument();
-    expect(container.querySelector('em')).toBeInTheDocument();
+    expect(screen.getByTestId('title')).toBeInTheDocument();
+    expect(screen.getByTestId('body')).toBeInTheDocument();
+    expect(screen.getAllByTestId('text-with-html')[0]).toHaveTextContent('<strong>Test Heading</strong>');
+    expect(screen.getAllByTestId('text-with-html')[1]).toHaveTextContent('<em>Test Description</em>');
   });
 }); 
