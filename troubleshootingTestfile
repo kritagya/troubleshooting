@@ -31,14 +31,14 @@ jest.mock('../TroubleShootingNewPage', () => {
         </Fragment>
       );
     },
-    renderDelphiBanner: (eligibleTemplates = '', templateId = '', steps = []) => {
+    renderDelphiBanner: (eligibleTemplates = '', templateId = '', steps = [], isMVODigital = false) => {
       const eligibleIds = eligibleTemplates.split(',');
       const [firstStep] = steps;
       const { delphiBannerAttrs = [] } = firstStep || {};
 
       if (delphiBannerAttrs.length) return false;
 
-      return !window.isMVODigital || (window.isMVODigital && eligibleIds.includes(templateId));
+      return !isMVODigital || (isMVODigital && eligibleIds.includes(templateId));
     }
   };
 });
@@ -235,42 +235,39 @@ describe('renderMessageModalBody', () => {
 });
 
 describe('renderDelphiBanner', () => {
-  const originalWindow = window;
-  beforeEach(() => { window = { ...originalWindow }; });
-  afterEach(() => { window = originalWindow; });
-
   it('returns false when delphiBannerAttrs exists', () => {
     expect(TroubleShootingNewPage.renderDelphiBanner(
       'TEMPLATE_1,TEMPLATE_2',
       'TEMPLATE_1',
-      [{ delphiBannerAttrs: ['some-attr'] }]
+      [{ delphiBannerAttrs: ['some-attr'] }],
+      false
     )).toBe(false);
   });
 
   it('returns true for non-MVODigital with empty delphiBannerAttrs', () => {
-    window.isMVODigital = false;
     expect(TroubleShootingNewPage.renderDelphiBanner(
       'TEMPLATE_1,TEMPLATE_2',
       'TEMPLATE_1',
-      [{ delphiBannerAttrs: [] }]
+      [{ delphiBannerAttrs: [] }],
+      false
     )).toBe(true);
   });
 
   it('returns true for MVODigital with matching template', () => {
-    window.isMVODigital = true;
     expect(TroubleShootingNewPage.renderDelphiBanner(
       'TEMPLATE_1,TEMPLATE_2',
       'TEMPLATE_1',
-      [{ delphiBannerAttrs: [] }]
+      [{ delphiBannerAttrs: [] }],
+      true
     )).toBe(true);
   });
 
   it('returns false for MVODigital with non-matching template', () => {
-    window.isMVODigital = true;
     expect(TroubleShootingNewPage.renderDelphiBanner(
       'TEMPLATE_1,TEMPLATE_2',
       'TEMPLATE_3',
-      [{ delphiBannerAttrs: [] }]
+      [{ delphiBannerAttrs: [] }],
+      true
     )).toBe(false);
   });
 });
