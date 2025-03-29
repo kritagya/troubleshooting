@@ -646,7 +646,7 @@ describe('TroubleShootingNewPage Component', () => {
       
       // Test state updates
       act(() => {
-        component.getByTestId('option-select').change({ target: { value: '1' } });
+        fireEvent.change(component.getByTestId('option-select'), { target: { value: '1' } });
       });
       
       expect(component.getByTestId('selected-value')).toHaveTextContent('1');
