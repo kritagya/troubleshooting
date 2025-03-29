@@ -130,14 +130,19 @@ jest.mock('../TroubleShootingNewPage', () => {
       if (addressLine) setAddressLine(addressLine);
       if (btnValue) setBtnValue(btnValue);
     },
-    handleDynamicCta: async (e, element = {}) => {
+    handleDynamicCta: async (e, element = {}, openUrl = null, redirect = null) => {
       e.preventDefault();
       const { type = '', url = '', target = '' } = element;
+      
+      // Use the provided callbacks or create no-op functions
+      const openWindow = openUrl || (() => {});
+      const redirectTo = redirect || (() => {});
+      
       if (type === 'url' && url) {
         if (target === '_blank') {
-          window.open(url, '_blank');
+          openWindow(url, '_blank');
         } else {
-          window.location.href = url;
+          redirectTo(url);
         }
       }
       return true;
@@ -147,11 +152,15 @@ jest.mock('../TroubleShootingNewPage', () => {
       if (!value) return null;
       return { selectedValue: value };
     },
-    handleButtonClick: (e, item = {}) => {
+    handleButtonClick: (e, item = {}, redirect = null) => {
       e.preventDefault();
       const { action = '', url = '' } = item;
+      
+      // Use the provided callback or create a no-op function
+      const redirectTo = redirect || (() => {});
+      
       if (action === 'redirect' && url) {
-        window.location.href = url;
+        redirectTo(url);
         return true;
       }
       return false;
@@ -677,18 +686,6 @@ describe('TroubleShootingNewPage Component', () => {
 
 describe('Event Handlers', () => {
   describe('handleDynamicCta', () => {
-    let originalWindow;
-    
-    beforeEach(() => {
-      originalWindow = { ...window };
-      window.open = jest.fn();
-      window.location.href = '';
-    });
-
-    afterEach(() => {
-      window = originalWindow;
-    });
-
     it('should handle URL type with _blank target', async () => {
       const event = { preventDefault: jest.fn() };
       const element = {
@@ -696,11 +693,14 @@ describe('Event Handlers', () => {
         url: 'https://test.com',
         target: '_blank'
       };
-
-      await TroubleShootingNewPage.handleDynamicCta(event, element);
+      const openUrl = jest.fn();
+      const redirect = jest.fn();
+      
+      await TroubleShootingNewPage.handleDynamicCta(event, element, openUrl, redirect);
       
       expect(event.preventDefault).toHaveBeenCalled();
-      expect(window.open).toHaveBeenCalledWith('https://test.com', '_blank');
+      expect(openUrl).toHaveBeenCalledWith('https://test.com', '_blank');
+      expect(redirect).not.toHaveBeenCalled();
     });
 
     it('should handle URL type with same window target', async () => {
@@ -709,11 +709,14 @@ describe('Event Handlers', () => {
         type: 'url',
         url: 'https://test.com'
       };
-
-      await TroubleShootingNewPage.handleDynamicCta(event, element);
+      const openUrl = jest.fn();
+      const redirect = jest.fn();
+      
+      await TroubleShootingNewPage.handleDynamicCta(event, element, openUrl, redirect);
       
       expect(event.preventDefault).toHaveBeenCalled();
-      expect(window.location.href).toBe('https://test.com');
+      expect(redirect).toHaveBeenCalledWith('https://test.com');
+      expect(openUrl).not.toHaveBeenCalled();
     });
 
     it('should handle non-URL type', async () => {
@@ -721,7 +724,26 @@ describe('Event Handlers', () => {
       const element = {
         type: 'other'
       };
+      const openUrl = jest.fn();
+      const redirect = jest.fn();
+      
+      const result = await TroubleShootingNewPage.handleDynamicCta(event, element, openUrl, redirect);
+      
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(openUrl).not.toHaveBeenCalled();
+      expect(redirect).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+    });
 
+    it('should work without provided callback functions', async () => {
+      const event = { preventDefault: jest.fn() };
+      const element = {
+        type: 'url',
+        url: 'https://test.com',
+        target: '_blank'
+      };
+      
+      // This should not throw an error
       const result = await TroubleShootingNewPage.handleDynamicCta(event, element);
       
       expect(event.preventDefault).toHaveBeenCalled();
@@ -759,28 +781,18 @@ describe('Event Handlers', () => {
   });
 
   describe('handleButtonClick', () => {
-    let originalWindow;
-    
-    beforeEach(() => {
-      originalWindow = { ...window };
-      window.location.href = '';
-    });
-
-    afterEach(() => {
-      window = originalWindow;
-    });
-
     it('should handle redirect action', () => {
       const event = { preventDefault: jest.fn() };
       const item = {
         action: 'redirect',
         url: 'https://test.com'
       };
+      const redirect = jest.fn();
 
-      const result = TroubleShootingNewPage.handleButtonClick(event, item);
+      const result = TroubleShootingNewPage.handleButtonClick(event, item, redirect);
       
       expect(event.preventDefault).toHaveBeenCalled();
-      expect(window.location.href).toBe('https://test.com');
+      expect(redirect).toHaveBeenCalledWith('https://test.com');
       expect(result).toBe(true);
     });
 
@@ -789,20 +801,38 @@ describe('Event Handlers', () => {
       const item = {
         action: 'other'
       };
+      const redirect = jest.fn();
 
-      const result = TroubleShootingNewPage.handleButtonClick(event, item);
+      const result = TroubleShootingNewPage.handleButtonClick(event, item, redirect);
       
       expect(event.preventDefault).toHaveBeenCalled();
+      expect(redirect).not.toHaveBeenCalled();
       expect(result).toBe(false);
     });
 
     it('should handle empty item', () => {
       const event = { preventDefault: jest.fn() };
+      const redirect = jest.fn();
       
-      const result = TroubleShootingNewPage.handleButtonClick(event);
+      const result = TroubleShootingNewPage.handleButtonClick(event, undefined, redirect);
       
       expect(event.preventDefault).toHaveBeenCalled();
+      expect(redirect).not.toHaveBeenCalled();
       expect(result).toBe(false);
+    });
+
+    it('should work without provided callback function', () => {
+      const event = { preventDefault: jest.fn() };
+      const item = {
+        action: 'redirect',
+        url: 'https://test.com'
+      };
+      
+      // This should not throw an error
+      const result = TroubleShootingNewPage.handleButtonClick(event, item);
+      
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(result).toBe(true);
     });
   });
 });
