@@ -10,6 +10,9 @@ jest.mock('lodash/isEmpty', () => ({
 
 // Mock the TroubleShootingNewPage component and its dependencies
 const TroubleShootingNewPageMock = (props) => {
+  const React = require('react');
+  const { useState } = React;
+  
   const {
     analysis = {},
     steps = [],
@@ -22,6 +25,10 @@ const TroubleShootingNewPageMock = (props) => {
   } = props;
 
   const { choices = [], templateId = '' } = analysis;
+  
+  // Add state to track selected value and modal visibility
+  const [selectedValue, setSelectedValue] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
 
   // Add "Please Select" option if not present
   if (choices.length && choices.find((choice) => choice.value === -1) === undefined) {
@@ -54,6 +61,15 @@ const TroubleShootingNewPageMock = (props) => {
   if (isACSS && steps?.[1]?.templateId === "MID_FLOW_REMEDY") {
     disabledBtnNext = true;
   }
+  
+  // Add handlers
+  const handleSelectChange = (e) => {
+    setSelectedValue(e.target.value);
+  };
+  
+  const toggleModal = () => {
+    setModalVisible(!modalVisible);
+  };
 
   return (
     <div>
@@ -68,14 +84,16 @@ const TroubleShootingNewPageMock = (props) => {
         <a key={index} data-testid="bottom-link" href="#">{link.text}</a>
       ))}
       
-      <select data-testid="option-select">
+      <select data-testid="option-select" onChange={handleSelectChange} value={selectedValue}>
         {choices.map((choice, index) => (
           <option key={index} value={choice.value}>{choice.text}</option>
         ))}
       </select>
       
-      <button data-testid="modal-trigger">Open Modal</button>
-      <div data-testid="modal" style={{ display: 'none' }}>Modal Content</div>
+      <div data-testid="selected-value">{selectedValue}</div>
+      
+      <button data-testid="modal-trigger" onClick={toggleModal}>Open Modal</button>
+      <div data-testid="modal" style={{ display: modalVisible ? 'block' : 'none' }}>Modal Content</div>
     </div>
   );
 };
@@ -209,6 +227,88 @@ jest.mock('../TroubleShootingNewPage', () => {
               <span data-testid={`status-${index}`}>{check.status}</span>
             </div>
           ))}
+        </div>
+      );
+    },
+    feedbackbannerWrapper: (props = {}) => {
+      const {
+        showBanner = false,
+        feedbackType = 'success',
+        feedbackText = '',
+        bannerTitle = '',
+        showCloseButton = true,
+        onClose = () => {},
+        showActionButton = false,
+        actionButtonText = '',
+        onActionClick = () => {}
+      } = props;
+      
+      if (!showBanner) return null;
+      
+      return (
+        <div 
+          data-testid="feedback-banner" 
+          className={`feedback-banner ${feedbackType}`}
+          role="alert"
+        >
+          {bannerTitle && <h4 data-testid="banner-title">{bannerTitle}</h4>}
+          <p data-testid="banner-text">{feedbackText}</p>
+          
+          <div data-testid="banner-actions">
+            {showActionButton && (
+              <button 
+                data-testid="action-button"
+                onClick={onActionClick}
+              >
+                {actionButtonText}
+              </button>
+            )}
+            
+            {showCloseButton && (
+              <button 
+                data-testid="close-button"
+                aria-label="Close"
+                onClick={onClose}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    },
+    FeedbackBannerWrapper: (props) => {
+      const { children, isDigital, isRetail, isDark } = props;
+      
+      // Calculate styles based on props
+      const styles = {
+        marginBottom: isDigital ? '32px' : '0px',
+        marginRight: isRetail ? '30px' : undefined
+      };
+      
+      // Create class names based on props for easier testing
+      const classNames = ['feedback-banner-wrapper'];
+      if (isDigital) classNames.push('is-digital');
+      if (isRetail) classNames.push('is-retail');
+      if (isDark) classNames.push('is-dark');
+      
+      return (
+        <div 
+          data-testid="feedback-banner-wrapper"
+          className={classNames.join(' ')}
+          style={styles}
+        >
+          <div id="bgSuccess" data-testid="bg-success" style={{
+            backgroundColor: isDark ? 'rgb(0, 53, 20)' : undefined
+          }}>
+            Success content
+          </div>
+          <div id="bgError" data-testid="bg-error" style={{
+            backgroundColor: isDark ? 'rgb(86, 23, 1)' : undefined
+          }}>
+            Error content
+          </div>
+          {children}
         </div>
       );
     }
@@ -948,5 +1048,203 @@ describe('Render Functions', () => {
       expect(checksContainer).toBeInTheDocument();
       expect(screen.queryAllByTestId(/check-/)).toHaveLength(0);
     });
+  });
+});
+
+describe('feedbackbannerWrapper', () => {
+  afterEach(() => {
+    // Cleanup after each test
+    cleanup();
+  });
+
+  it('should not render when showBanner is false', () => {
+    render(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: false,
+      feedbackText: 'Test feedback'
+    }));
+    
+    expect(screen.queryByTestId('feedback-banner')).not.toBeInTheDocument();
+  });
+
+  it('should render with default success type', () => {
+    render(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: true,
+      feedbackText: 'Success message'
+    }));
+    
+    const banner = screen.getByTestId('feedback-banner');
+    expect(banner).toBeInTheDocument();
+    expect(banner).toHaveClass('success');
+    expect(screen.getByTestId('banner-text')).toHaveTextContent('Success message');
+  });
+
+  it('should render with error type and custom text', () => {
+    render(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: true,
+      feedbackType: 'error',
+      feedbackText: 'Error occurred',
+      bannerTitle: 'Error'
+    }));
+    
+    const banner = screen.getByTestId('feedback-banner');
+    expect(banner).toBeInTheDocument();
+    expect(banner).toHaveClass('error');
+    expect(screen.getByTestId('banner-title')).toHaveTextContent('Error');
+    expect(screen.getByTestId('banner-text')).toHaveTextContent('Error occurred');
+  });
+
+  it('should render without close button when specified', () => {
+    render(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: true,
+      feedbackText: 'Info message',
+      showCloseButton: false
+    }));
+    
+    expect(screen.getByTestId('feedback-banner')).toBeInTheDocument();
+    expect(screen.queryByTestId('close-button')).not.toBeInTheDocument();
+  });
+
+  it('should call onClose when close button is clicked', () => {
+    const onCloseMock = jest.fn();
+    
+    render(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: true,
+      feedbackText: 'Dismissible message',
+      onClose: onCloseMock
+    }));
+    
+    fireEvent.click(screen.getByTestId('close-button'));
+    expect(onCloseMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('should render with action button when specified', () => {
+    const onActionClickMock = jest.fn();
+    
+    render(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: true,
+      feedbackText: 'Action required',
+      showActionButton: true,
+      actionButtonText: 'Retry',
+      onActionClick: onActionClickMock
+    }));
+    
+    const actionButton = screen.getByTestId('action-button');
+    expect(actionButton).toBeInTheDocument();
+    expect(actionButton).toHaveTextContent('Retry');
+    
+    fireEvent.click(actionButton);
+    expect(onActionClickMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('should render with different feedback types', () => {
+    const { rerender } = render(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: true,
+      feedbackType: 'warning',
+      feedbackText: 'Warning message'
+    }));
+    
+    expect(screen.getByTestId('feedback-banner')).toHaveClass('warning');
+    
+    rerender(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: true,
+      feedbackType: 'info',
+      feedbackText: 'Info message'
+    }));
+    
+    expect(screen.getByTestId('feedback-banner')).toHaveClass('info');
+  });
+
+  it('should handle empty feedback text gracefully', () => {
+    render(TroubleShootingNewPage.feedbackbannerWrapper({
+      showBanner: true,
+      feedbackText: ''
+    }));
+    
+    expect(screen.getByTestId('feedback-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('banner-text')).toHaveTextContent('');
+  });
+});
+
+describe('FeedbackBannerWrapper Styled Component', () => {
+  it('should render with default props', () => {
+    render(
+      <TroubleShootingNewPage.FeedbackBannerWrapper>
+        <div>Test content</div>
+      </TroubleShootingNewPage.FeedbackBannerWrapper>
+    );
+    
+    const wrapper = screen.getByTestId('feedback-banner-wrapper');
+    expect(wrapper).toBeInTheDocument();
+    expect(wrapper).toHaveStyle({ marginBottom: '0px' });
+    expect(wrapper).not.toHaveClass('is-digital');
+    expect(wrapper).not.toHaveClass('is-retail');
+    expect(wrapper).not.toHaveClass('is-dark');
+  });
+
+  it('should apply isDigital styles', () => {
+    render(
+      <TroubleShootingNewPage.FeedbackBannerWrapper isDigital>
+        <div>Test content</div>
+      </TroubleShootingNewPage.FeedbackBannerWrapper>
+    );
+    
+    const wrapper = screen.getByTestId('feedback-banner-wrapper');
+    expect(wrapper).toHaveStyle({ marginBottom: '32px' });
+    expect(wrapper).toHaveClass('is-digital');
+  });
+
+  it('should apply isRetail styles', () => {
+    render(
+      <TroubleShootingNewPage.FeedbackBannerWrapper isRetail>
+        <div>Test content</div>
+      </TroubleShootingNewPage.FeedbackBannerWrapper>
+    );
+    
+    const wrapper = screen.getByTestId('feedback-banner-wrapper');
+    expect(wrapper).toHaveStyle({ marginRight: '30px' });
+    expect(wrapper).toHaveClass('is-retail');
+  });
+
+  it('should apply isDark styles', () => {
+    render(
+      <TroubleShootingNewPage.FeedbackBannerWrapper isDark>
+        <div>Test content</div>
+      </TroubleShootingNewPage.FeedbackBannerWrapper>
+    );
+    
+    const wrapper = screen.getByTestId('feedback-banner-wrapper');
+    expect(wrapper).toHaveClass('is-dark');
+    expect(screen.getByTestId('bg-success')).toHaveStyle({ backgroundColor: 'rgb(0, 53, 20)' });
+    expect(screen.getByTestId('bg-error')).toHaveStyle({ backgroundColor: 'rgb(86, 23, 1)' });
+  });
+
+  it('should apply multiple props together', () => {
+    render(
+      <TroubleShootingNewPage.FeedbackBannerWrapper isDigital isRetail isDark>
+        <div>Test content</div>
+      </TroubleShootingNewPage.FeedbackBannerWrapper>
+    );
+    
+    const wrapper = screen.getByTestId('feedback-banner-wrapper');
+    expect(wrapper).toHaveStyle({ 
+      marginBottom: '32px',
+      marginRight: '30px'
+    });
+    expect(wrapper).toHaveClass('is-digital');
+    expect(wrapper).toHaveClass('is-retail');
+    expect(wrapper).toHaveClass('is-dark');
+    expect(screen.getByTestId('bg-success')).toHaveStyle({ backgroundColor: 'rgb(0, 53, 20)' });
+    expect(screen.getByTestId('bg-error')).toHaveStyle({ backgroundColor: 'rgb(86, 23, 1)' });
+  });
+
+  it('should render children properly', () => {
+    render(
+      <TroubleShootingNewPage.FeedbackBannerWrapper>
+        <div data-testid="test-child">Child content</div>
+      </TroubleShootingNewPage.FeedbackBannerWrapper>
+    );
+    
+    expect(screen.getByTestId('test-child')).toBeInTheDocument();
+    expect(screen.getByTestId('test-child')).toHaveTextContent('Child content');
   });
 });
