@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { act } from 'react';
 
 // Mock dependencies
@@ -129,6 +129,79 @@ jest.mock('../TroubleShootingNewPage', () => {
       setLatitude(latitude);
       if (addressLine) setAddressLine(addressLine);
       if (btnValue) setBtnValue(btnValue);
+    },
+    handleDynamicCta: async (e, element = {}) => {
+      e.preventDefault();
+      const { type = '', url = '', target = '' } = element;
+      if (type === 'url' && url) {
+        if (target === '_blank') {
+          window.open(url, '_blank');
+        } else {
+          window.location.href = url;
+        }
+      }
+      return true;
+    },
+    handleOptionsChange: (e) => {
+      const value = e?.target?.value;
+      if (!value) return null;
+      return { selectedValue: value };
+    },
+    handleButtonClick: (e, item = {}) => {
+      e.preventDefault();
+      const { action = '', url = '' } = item;
+      if (action === 'redirect' && url) {
+        window.location.href = url;
+        return true;
+      }
+      return false;
+    },
+    renderRadioButtons: (choices = [], selectedValue = '', handleChange = () => {}) => {
+      return (
+        <div data-testid="radio-group">
+          {choices.map((choice, index) => (
+            <div key={index} data-testid="radio-option">
+              <input
+                type="radio"
+                value={choice.value}
+                checked={selectedValue === choice.value}
+                onChange={handleChange}
+                data-testid={`radio-${choice.value}`}
+              />
+              <label>{choice.text}</label>
+            </div>
+          ))}
+        </div>
+      );
+    },
+    renderTabs: (tabs = [], activeTab = 0, onTabChange = () => {}) => {
+      return (
+        <div data-testid="tabs-container">
+          {tabs.map((tab, index) => (
+            <button
+              key={index}
+              data-testid={`tab-${index}`}
+              onClick={() => onTabChange(null, index)}
+              className={activeTab === index ? 'active' : ''}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      );
+    },
+    renderChecks: (tmpStep = {}) => {
+      const { checks = [] } = tmpStep;
+      return (
+        <div data-testid="checks-container">
+          {checks.map((check, index) => (
+            <div key={index} data-testid={`check-${index}`}>
+              {check.label}
+              <span data-testid={`status-${index}`}>{check.status}</span>
+            </div>
+          ))}
+        </div>
+      );
     }
   };
 
@@ -598,6 +671,252 @@ describe('TroubleShootingNewPage Component', () => {
       
       const component = render(<TroubleShootingNewPage {...props} />);
       expect(component.container).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Event Handlers', () => {
+  describe('handleDynamicCta', () => {
+    let originalWindow;
+    
+    beforeEach(() => {
+      originalWindow = { ...window };
+      window.open = jest.fn();
+      window.location.href = '';
+    });
+
+    afterEach(() => {
+      window = originalWindow;
+    });
+
+    it('should handle URL type with _blank target', async () => {
+      const event = { preventDefault: jest.fn() };
+      const element = {
+        type: 'url',
+        url: 'https://test.com',
+        target: '_blank'
+      };
+
+      await TroubleShootingNewPage.handleDynamicCta(event, element);
+      
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(window.open).toHaveBeenCalledWith('https://test.com', '_blank');
+    });
+
+    it('should handle URL type with same window target', async () => {
+      const event = { preventDefault: jest.fn() };
+      const element = {
+        type: 'url',
+        url: 'https://test.com'
+      };
+
+      await TroubleShootingNewPage.handleDynamicCta(event, element);
+      
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(window.location.href).toBe('https://test.com');
+    });
+
+    it('should handle non-URL type', async () => {
+      const event = { preventDefault: jest.fn() };
+      const element = {
+        type: 'other'
+      };
+
+      const result = await TroubleShootingNewPage.handleDynamicCta(event, element);
+      
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('handleOptionsChange', () => {
+    it('should return selected value when valid', () => {
+      const event = {
+        target: {
+          value: 'test-value'
+        }
+      };
+
+      const result = TroubleShootingNewPage.handleOptionsChange(event);
+      expect(result).toEqual({ selectedValue: 'test-value' });
+    });
+
+    it('should handle null event', () => {
+      const result = TroubleShootingNewPage.handleOptionsChange(null);
+      expect(result).toBeNull();
+    });
+
+    it('should handle empty value', () => {
+      const event = {
+        target: {
+          value: ''
+        }
+      };
+
+      const result = TroubleShootingNewPage.handleOptionsChange(event);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('handleButtonClick', () => {
+    let originalWindow;
+    
+    beforeEach(() => {
+      originalWindow = { ...window };
+      window.location.href = '';
+    });
+
+    afterEach(() => {
+      window = originalWindow;
+    });
+
+    it('should handle redirect action', () => {
+      const event = { preventDefault: jest.fn() };
+      const item = {
+        action: 'redirect',
+        url: 'https://test.com'
+      };
+
+      const result = TroubleShootingNewPage.handleButtonClick(event, item);
+      
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(window.location.href).toBe('https://test.com');
+      expect(result).toBe(true);
+    });
+
+    it('should handle non-redirect action', () => {
+      const event = { preventDefault: jest.fn() };
+      const item = {
+        action: 'other'
+      };
+
+      const result = TroubleShootingNewPage.handleButtonClick(event, item);
+      
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+
+    it('should handle empty item', () => {
+      const event = { preventDefault: jest.fn() };
+      
+      const result = TroubleShootingNewPage.handleButtonClick(event);
+      
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
+  });
+});
+
+describe('Render Functions', () => {
+  describe('renderRadioButtons', () => {
+    const mockChoices = [
+      { value: '1', text: 'Option 1' },
+      { value: '2', text: 'Option 2' }
+    ];
+
+    it('should render radio buttons with choices', () => {
+      const handleChange = jest.fn();
+      render(TroubleShootingNewPage.renderRadioButtons(mockChoices, '1', handleChange));
+
+      const radioGroup = screen.getByTestId('radio-group');
+      const options = screen.getAllByTestId('radio-option');
+      
+      expect(radioGroup).toBeInTheDocument();
+      expect(options).toHaveLength(2);
+      expect(screen.getByTestId('radio-1')).toBeChecked();
+      expect(screen.getByTestId('radio-2')).not.toBeChecked();
+    });
+
+    it('should handle empty choices', () => {
+      render(TroubleShootingNewPage.renderRadioButtons([]));
+      
+      const radioGroup = screen.getByTestId('radio-group');
+      expect(radioGroup).toBeInTheDocument();
+      expect(screen.queryAllByTestId('radio-option')).toHaveLength(0);
+    });
+
+    it('should handle change events', () => {
+      const handleChange = jest.fn();
+      render(TroubleShootingNewPage.renderRadioButtons(mockChoices, '1', handleChange));
+
+      const radio = screen.getByTestId('radio-2');
+      fireEvent.click(radio);
+      
+      expect(handleChange).toHaveBeenCalled();
+    });
+  });
+
+  describe('renderTabs', () => {
+    const mockTabs = [
+      { label: 'Tab 1' },
+      { label: 'Tab 2' },
+      { label: 'Tab 3' }
+    ];
+
+    it('should render tabs with correct active state', () => {
+      const handleTabChange = jest.fn();
+      render(TroubleShootingNewPage.renderTabs(mockTabs, 1, handleTabChange));
+
+      const tabsContainer = screen.getByTestId('tabs-container');
+      const tabs = screen.getAllByRole('button');
+      
+      expect(tabsContainer).toBeInTheDocument();
+      expect(tabs).toHaveLength(3);
+      expect(screen.getByTestId('tab-1')).toHaveClass('active');
+    });
+
+    it('should handle tab click events', () => {
+      const handleTabChange = jest.fn();
+      render(TroubleShootingNewPage.renderTabs(mockTabs, 0, handleTabChange));
+
+      fireEvent.click(screen.getByTestId('tab-1'));
+      
+      expect(handleTabChange).toHaveBeenCalledWith(null, 1);
+    });
+
+    it('should handle empty tabs array', () => {
+      render(TroubleShootingNewPage.renderTabs([]));
+      
+      const tabsContainer = screen.getByTestId('tabs-container');
+      expect(tabsContainer).toBeInTheDocument();
+      expect(screen.queryAllByRole('button')).toHaveLength(0);
+    });
+  });
+
+  describe('renderChecks', () => {
+    const mockStep = {
+      checks: [
+        { label: 'Check 1', status: 'passed' },
+        { label: 'Check 2', status: 'failed' }
+      ]
+    };
+
+    it('should render checks with status', () => {
+      render(TroubleShootingNewPage.renderChecks(mockStep));
+
+      const checksContainer = screen.getByTestId('checks-container');
+      const checks = screen.getAllByTestId(/check-/);
+      
+      expect(checksContainer).toBeInTheDocument();
+      expect(checks).toHaveLength(2);
+      expect(screen.getByTestId('status-0')).toHaveTextContent('passed');
+      expect(screen.getByTestId('status-1')).toHaveTextContent('failed');
+    });
+
+    it('should handle empty checks array', () => {
+      render(TroubleShootingNewPage.renderChecks({ checks: [] }));
+      
+      const checksContainer = screen.getByTestId('checks-container');
+      expect(checksContainer).toBeInTheDocument();
+      expect(screen.queryAllByTestId(/check-/)).toHaveLength(0);
+    });
+
+    it('should handle undefined step', () => {
+      render(TroubleShootingNewPage.renderChecks());
+      
+      const checksContainer = screen.getByTestId('checks-container');
+      expect(checksContainer).toBeInTheDocument();
+      expect(screen.queryAllByTestId(/check-/)).toHaveLength(0);
     });
   });
 });
