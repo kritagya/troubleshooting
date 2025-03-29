@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { act } from 'react';
 
 // Mock the TroubleShootingNewPage component
@@ -154,695 +154,709 @@ jest.mock('../TroubleShootingNewPage', () => {
 // Import the mocked component
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
-describe('isEligibleForResumeEmail', () => {
-  describe('Template ID Based Eligibility', () => {
-    test('should return true for WAITING_FOR_RESPONSE template', () => {
-      const step = {
-        templateId: 'WAITING_FOR_RESPONSE',
-        title: 'Some Title'
-      };
-      const navHistory = [];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
-    });
-
-    test('should return true for RESOLUTION_OPTIONS_ALL template', () => {
-      const step = {
-        templateId: 'RESOLUTION_OPTIONS_ALL',
-        title: 'Some Title'
-      };
-      const navHistory = [];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
-    });
-
-    test('should return false for non-matching template ID', () => {
-      const step = {
-        templateId: 'SOME_OTHER_TEMPLATE',
-        title: 'Regular Step'
-      };
-      const navHistory = [{ articleId: 'article1' }];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
-    });
-  });
-
-  describe('Title Based Eligibility', () => {
-    test('should return true when title includes "End of Troubleshooting"', () => {
-      const step = {
-        templateId: 'SOME_TEMPLATE',
-        title: 'End of Troubleshooting - Success'
-      };
-      const navHistory = [{ articleId: 'article1' }];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
-    });
-
-    test('should return false when title does not include "End of Troubleshooting"', () => {
-      const step = {
-        templateId: 'SOME_TEMPLATE',
-        title: 'Regular Step Title'
-      };
-      const navHistory = [{ articleId: 'article1' }];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
-    });
-  });
-
-  describe('Navigation History Based Eligibility', () => {
-    test('should return true when navHistory has no articles', () => {
-      const step = {
-        templateId: 'SOME_TEMPLATE',
-        title: 'Regular Step'
-      };
-      const navHistory = [
-        { id: 'step1' },
-        { id: 'step2' }
-      ];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
-    });
-
-    test('should return false when navHistory has articles', () => {
-      const step = {
-        templateId: 'SOME_TEMPLATE',
-        title: 'Regular Step'
-      };
-      const navHistory = [
-        { id: 'step1', articleId: 'article1' },
-        { id: 'step2' }
-      ];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
-    });
-  });
-
-  describe('Edge Cases', () => {
-    test('should handle empty step object', () => {
-      const step = {};
-      const navHistory = [];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
-    });
-
-    test('should handle undefined parameters', () => {
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail()).toBe(true);
-    });
-
-    test('should handle empty navHistory array', () => {
-      const step = {
-        templateId: 'SOME_TEMPLATE',
-        title: 'Regular Step'
-      };
-      const navHistory = [];
-      
-      expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
-    });
+// This test ensures basic functionality works
+describe('TroubleShootingNewPage Basic Tests', () => {
+  // A simple preliminary test that will always pass
+  it('should import the component successfully', () => {
+    expect(TroubleShootingNewPage).toBeDefined();
   });
 });
 
-describe('renderMessageModalBody', () => {
-  it('should render both heading and description when provided', () => {
-    const modalParams = {
-      heading: 'Test Heading',
-      description: 'Test Description'
-    };
-
-    render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
-    
-    const headingElement = screen.getByTestId('title');
-    const descriptionElement = screen.getByTestId('body');
-    
-    expect(headingElement).toBeInTheDocument();
-    expect(descriptionElement).toBeInTheDocument();
-    expect(screen.getByTestId('spacer-div')).toHaveStyle({ height: '20px' });
-    expect(screen.getAllByTestId('text-with-html')[0]).toHaveTextContent('Test Heading');
-    expect(screen.getAllByTestId('text-with-html')[1]).toHaveTextContent('Test Description');
+describe('TroubleShootingNewPage Tests', () => {
+  it('should be defined', () => {
+    expect(TroubleShootingNewPage).toBeDefined();
   });
 
-  it('should render only heading when description is not provided', () => {
-    const modalParams = {
-      heading: 'Test Heading'
-    };
+  describe('isEligibleForResumeEmail', () => {
+    describe('Template ID Based Eligibility', () => {
+      test('should return true for WAITING_FOR_RESPONSE template', () => {
+        const step = {
+          templateId: 'WAITING_FOR_RESPONSE',
+          title: 'Some Title'
+        };
+        const navHistory = [];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      });
 
-    render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
-    
-    expect(screen.getByTestId('title')).toBeInTheDocument();
-    expect(screen.queryByTestId('body')).not.toBeInTheDocument();
-    expect(screen.getByTestId('spacer-div')).toBeInTheDocument();
-    expect(screen.getByTestId('text-with-html')).toHaveTextContent('Test Heading');
+      test('should return true for RESOLUTION_OPTIONS_ALL template', () => {
+        const step = {
+          templateId: 'RESOLUTION_OPTIONS_ALL',
+          title: 'Some Title'
+        };
+        const navHistory = [];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      });
+
+      test('should return false for non-matching template ID', () => {
+        const step = {
+          templateId: 'SOME_OTHER_TEMPLATE',
+          title: 'Regular Step'
+        };
+        const navHistory = [{ articleId: 'article1' }];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
+      });
+    });
+
+    describe('Title Based Eligibility', () => {
+      test('should return true when title includes "End of Troubleshooting"', () => {
+        const step = {
+          templateId: 'SOME_TEMPLATE',
+          title: 'End of Troubleshooting - Success'
+        };
+        const navHistory = [{ articleId: 'article1' }];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      });
+
+      test('should return false when title does not include "End of Troubleshooting"', () => {
+        const step = {
+          templateId: 'SOME_TEMPLATE',
+          title: 'Regular Step Title'
+        };
+        const navHistory = [{ articleId: 'article1' }];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
+      });
+    });
+
+    describe('Navigation History Based Eligibility', () => {
+      test('should return true when navHistory has no articles', () => {
+        const step = {
+          templateId: 'SOME_TEMPLATE',
+          title: 'Regular Step'
+        };
+        const navHistory = [
+          { id: 'step1' },
+          { id: 'step2' }
+        ];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      });
+
+      test('should return false when navHistory has articles', () => {
+        const step = {
+          templateId: 'SOME_TEMPLATE',
+          title: 'Regular Step'
+        };
+        const navHistory = [
+          { id: 'step1', articleId: 'article1' },
+          { id: 'step2' }
+        ];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(false);
+      });
+    });
+
+    describe('Edge Cases', () => {
+      test('should handle empty step object', () => {
+        const step = {};
+        const navHistory = [];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      });
+
+      test('should handle undefined parameters', () => {
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail()).toBe(true);
+      });
+
+      test('should handle empty navHistory array', () => {
+        const step = {
+          templateId: 'SOME_TEMPLATE',
+          title: 'Regular Step'
+        };
+        const navHistory = [];
+        
+        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
+      });
+    });
   });
 
-  it('should render only description when heading is not provided', () => {
-    const modalParams = {
-      description: 'Test Description'
-    };
+  describe('renderMessageModalBody', () => {
+    it('should render both heading and description when provided', () => {
+      const modalParams = {
+        heading: 'Test Heading',
+        description: 'Test Description'
+      };
 
-    render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
-    
-    expect(screen.queryByTestId('title')).not.toBeInTheDocument();
-    expect(screen.getByTestId('body')).toBeInTheDocument();
-    expect(screen.queryByTestId('spacer-div')).not.toBeInTheDocument();
-    expect(screen.getByTestId('text-with-html')).toHaveTextContent('Test Description');
+      render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+      
+      const headingElement = screen.getByTestId('title');
+      const descriptionElement = screen.getByTestId('body');
+      
+      expect(headingElement).toBeInTheDocument();
+      expect(descriptionElement).toBeInTheDocument();
+      expect(screen.getByTestId('spacer-div')).toHaveStyle({ height: '20px' });
+      expect(screen.getAllByTestId('text-with-html')[0]).toHaveTextContent('Test Heading');
+      expect(screen.getAllByTestId('text-with-html')[1]).toHaveTextContent('Test Description');
+    });
+
+    it('should render only heading when description is not provided', () => {
+      const modalParams = {
+        heading: 'Test Heading'
+      };
+
+      render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+      
+      expect(screen.getByTestId('title')).toBeInTheDocument();
+      expect(screen.queryByTestId('body')).not.toBeInTheDocument();
+      expect(screen.getByTestId('spacer-div')).toBeInTheDocument();
+      expect(screen.getByTestId('text-with-html')).toHaveTextContent('Test Heading');
+    });
+
+    it('should render only description when heading is not provided', () => {
+      const modalParams = {
+        description: 'Test Description'
+      };
+
+      render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+      
+      expect(screen.queryByTestId('title')).not.toBeInTheDocument();
+      expect(screen.getByTestId('body')).toBeInTheDocument();
+      expect(screen.queryByTestId('spacer-div')).not.toBeInTheDocument();
+      expect(screen.getByTestId('text-with-html')).toHaveTextContent('Test Description');
+    });
+
+    it('should handle HTML content in heading and description', () => {
+      const modalParams = {
+        heading: '<strong>Test Heading</strong>',
+        description: '<em>Test Description</em>'
+      };
+
+      render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
+      
+      expect(screen.getByTestId('title')).toBeInTheDocument();
+      expect(screen.getByTestId('body')).toBeInTheDocument();
+      expect(screen.getAllByTestId('text-with-html')[0]).toHaveTextContent('<strong>Test Heading</strong>');
+      expect(screen.getAllByTestId('text-with-html')[1]).toHaveTextContent('<em>Test Description</em>');
+    });
   });
 
-  it('should handle HTML content in heading and description', () => {
-    const modalParams = {
-      heading: '<strong>Test Heading</strong>',
-      description: '<em>Test Description</em>'
-    };
+  describe('renderDelphiBanner', () => {
+    it('returns false when delphiBannerAttrs exists', () => {
+      expect(TroubleShootingNewPage.renderDelphiBanner(
+        'TEMPLATE_1,TEMPLATE_2',
+        'TEMPLATE_1',
+        [{ delphiBannerAttrs: ['some-attr'] }],
+        false
+      )).toBe(false);
+    });
 
-    render(TroubleShootingNewPage.renderMessageModalBody(modalParams));
-    
-    expect(screen.getByTestId('title')).toBeInTheDocument();
-    expect(screen.getByTestId('body')).toBeInTheDocument();
-    expect(screen.getAllByTestId('text-with-html')[0]).toHaveTextContent('<strong>Test Heading</strong>');
-    expect(screen.getAllByTestId('text-with-html')[1]).toHaveTextContent('<em>Test Description</em>');
-  });
-});
+    it('returns true for non-MVODigital with empty delphiBannerAttrs', () => {
+      expect(TroubleShootingNewPage.renderDelphiBanner(
+        'TEMPLATE_1,TEMPLATE_2',
+        'TEMPLATE_1',
+        [{ delphiBannerAttrs: [] }],
+        false
+      )).toBe(true);
+    });
 
-describe('renderDelphiBanner', () => {
-  it('returns false when delphiBannerAttrs exists', () => {
-    expect(TroubleShootingNewPage.renderDelphiBanner(
-      'TEMPLATE_1,TEMPLATE_2',
-      'TEMPLATE_1',
-      [{ delphiBannerAttrs: ['some-attr'] }],
-      false
-    )).toBe(false);
-  });
+    it('returns true for MVODigital with matching template', () => {
+      expect(TroubleShootingNewPage.renderDelphiBanner(
+        'TEMPLATE_1,TEMPLATE_2',
+        'TEMPLATE_1',
+        [{ delphiBannerAttrs: [] }],
+        true
+      )).toBe(true);
+    });
 
-  it('returns true for non-MVODigital with empty delphiBannerAttrs', () => {
-    expect(TroubleShootingNewPage.renderDelphiBanner(
-      'TEMPLATE_1,TEMPLATE_2',
-      'TEMPLATE_1',
-      [{ delphiBannerAttrs: [] }],
-      false
-    )).toBe(true);
-  });
-
-  it('returns true for MVODigital with matching template', () => {
-    expect(TroubleShootingNewPage.renderDelphiBanner(
-      'TEMPLATE_1,TEMPLATE_2',
-      'TEMPLATE_1',
-      [{ delphiBannerAttrs: [] }],
-      true
-    )).toBe(true);
+    it('returns false for MVODigital with non-matching template', () => {
+      expect(TroubleShootingNewPage.renderDelphiBanner(
+        'TEMPLATE_1,TEMPLATE_2',
+        'TEMPLATE_3',
+        [{ delphiBannerAttrs: [] }],
+        true
+      )).toBe(false);
+    });
   });
 
-  it('returns false for MVODigital with non-matching template', () => {
-    expect(TroubleShootingNewPage.renderDelphiBanner(
-      'TEMPLATE_1,TEMPLATE_2',
-      'TEMPLATE_3',
-      [{ delphiBannerAttrs: [] }],
-      true
-    )).toBe(false);
-  });
-});
-
-describe('handleMapData', () => {
-  it('should set longitude and latitude when provided', () => {
-    const setLongitude = jest.fn();
-    const setLatitude = jest.fn();
-    const setAddressLine = jest.fn();
-    const setBtnValue = jest.fn();
-    
-    const event = {
-      target: {
-        dataset: {
-          longitude: '123.456',
-          latitude: '78.90'
+  describe('handleMapData', () => {
+    it('should set longitude and latitude when provided', () => {
+      const setLongitude = jest.fn();
+      const setLatitude = jest.fn();
+      const setAddressLine = jest.fn();
+      const setBtnValue = jest.fn();
+      
+      const event = {
+        target: {
+          dataset: {
+            longitude: '123.456',
+            latitude: '78.90'
+          }
         }
-      }
-    };
+      };
 
-    TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
+      TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
 
-    expect(setLongitude).toHaveBeenCalledWith('123.456');
-    expect(setLatitude).toHaveBeenCalledWith('78.90');
-    expect(setAddressLine).not.toHaveBeenCalled();
-    expect(setBtnValue).not.toHaveBeenCalled();
-  });
+      expect(setLongitude).toHaveBeenCalledWith('123.456');
+      expect(setLatitude).toHaveBeenCalledWith('78.90');
+      expect(setAddressLine).not.toHaveBeenCalled();
+      expect(setBtnValue).not.toHaveBeenCalled();
+    });
 
-  it('should set all values when provided', () => {
-    const setLongitude = jest.fn();
-    const setLatitude = jest.fn();
-    const setAddressLine = jest.fn();
-    const setBtnValue = jest.fn();
-    
-    const event = {
-      target: {
-        dataset: {
-          longitude: '123.456',
-          latitude: '78.90',
-          addressLine: '123 Test St',
-          btnValue: 'Submit'
+    it('should set all values when provided', () => {
+      const setLongitude = jest.fn();
+      const setLatitude = jest.fn();
+      const setAddressLine = jest.fn();
+      const setBtnValue = jest.fn();
+      
+      const event = {
+        target: {
+          dataset: {
+            longitude: '123.456',
+            latitude: '78.90',
+            addressLine: '123 Test St',
+            btnValue: 'Submit'
+          }
         }
-      }
-    };
+      };
 
-    TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
+      TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
 
-    expect(setLongitude).toHaveBeenCalledWith('123.456');
-    expect(setLatitude).toHaveBeenCalledWith('78.90');
-    expect(setAddressLine).toHaveBeenCalledWith('123 Test St');
-    expect(setBtnValue).toHaveBeenCalledWith('Submit');
-  });
+      expect(setLongitude).toHaveBeenCalledWith('123.456');
+      expect(setLatitude).toHaveBeenCalledWith('78.90');
+      expect(setAddressLine).toHaveBeenCalledWith('123 Test St');
+      expect(setBtnValue).toHaveBeenCalledWith('Submit');
+    });
 
-  it('should not set any values when longitude and latitude are missing', () => {
-    const setLongitude = jest.fn();
-    const setLatitude = jest.fn();
-    const setAddressLine = jest.fn();
-    const setBtnValue = jest.fn();
-    
-    const event = {
-      target: {
-        dataset: {
-          addressLine: '123 Test St',
-          btnValue: 'Submit'
+    it('should not set any values when longitude and latitude are missing', () => {
+      const setLongitude = jest.fn();
+      const setLatitude = jest.fn();
+      const setAddressLine = jest.fn();
+      const setBtnValue = jest.fn();
+      
+      const event = {
+        target: {
+          dataset: {
+            addressLine: '123 Test St',
+            btnValue: 'Submit'
+          }
         }
-      }
-    };
-
-    TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
-
-    expect(setLongitude).not.toHaveBeenCalled();
-    expect(setLatitude).not.toHaveBeenCalled();
-    expect(setAddressLine).not.toHaveBeenCalled();
-    expect(setBtnValue).not.toHaveBeenCalled();
-  });
-
-  it('should handle null event gracefully', () => {
-    const setLongitude = jest.fn();
-    const setLatitude = jest.fn();
-    const setAddressLine = jest.fn();
-    const setBtnValue = jest.fn();
-
-    TroubleShootingNewPage.handleMapData(null, setLongitude, setLatitude, setAddressLine, setBtnValue);
-
-    expect(setLongitude).not.toHaveBeenCalled();
-    expect(setLatitude).not.toHaveBeenCalled();
-    expect(setAddressLine).not.toHaveBeenCalled();
-    expect(setBtnValue).not.toHaveBeenCalled();
-  });
-
-  it('should handle undefined dataset gracefully', () => {
-    const setLongitude = jest.fn();
-    const setLatitude = jest.fn();
-    const setAddressLine = jest.fn();
-    const setBtnValue = jest.fn();
-    
-    const event = {
-      target: {}
-    };
-
-    TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
-
-    expect(setLongitude).not.toHaveBeenCalled();
-    expect(setLatitude).not.toHaveBeenCalled();
-    expect(setAddressLine).not.toHaveBeenCalled();
-    expect(setBtnValue).not.toHaveBeenCalled();
-  });
-});
-
-describe('TroubleShootingNewPage Component', () => {
-  const mockProps = {
-    analysis: {
-      templateId: 'TEST_TEMPLATE',
-      choices: [
-        { text: 'Option 1', value: '1', showCTATop: true },
-        { text: 'Option 2', value: '2', showCTATop: false },
-        { text: 'Network Compatibility', value: '3', showCTATop: false, recommended: true }
-      ]
-    },
-    steps: [
-      { templateId: 'STEP_1' },
-      { templateId: 'STEP_2' }
-    ],
-    prevStepEnabled: true,
-    nextStepEnabled: true,
-    isACSS: false,
-    vzmapCoordinatesFFlag: false
-  };
-
-  describe('Navigation Button States', () => {
-    it('should disable prev button when prevStepEnabled is false', () => {
-      const props = {
-        ...mockProps,
-        prevStepEnabled: false
       };
-      
-      const component = render(<TroubleShootingNewPage {...props} />);
-      const prevButton = component.getByTestId('prev-button');
-      expect(prevButton).toHaveAttribute('disabled');
+
+      TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
+
+      expect(setLongitude).not.toHaveBeenCalled();
+      expect(setLatitude).not.toHaveBeenCalled();
+      expect(setAddressLine).not.toHaveBeenCalled();
+      expect(setBtnValue).not.toHaveBeenCalled();
     });
 
-    it('should disable next button when nextStepEnabled is false', () => {
-      const props = {
-        ...mockProps,
-        nextStepEnabled: false
-      };
-      
-      const component = render(<TroubleShootingNewPage {...props} />);
-      const nextButton = component.getByTestId('next-button');
-      expect(nextButton).toHaveAttribute('disabled');
+    it('should handle null event gracefully', () => {
+      const setLongitude = jest.fn();
+      const setLatitude = jest.fn();
+      const setAddressLine = jest.fn();
+      const setBtnValue = jest.fn();
+
+      TroubleShootingNewPage.handleMapData(null, setLongitude, setLatitude, setAddressLine, setBtnValue);
+
+      expect(setLongitude).not.toHaveBeenCalled();
+      expect(setLatitude).not.toHaveBeenCalled();
+      expect(setAddressLine).not.toHaveBeenCalled();
+      expect(setBtnValue).not.toHaveBeenCalled();
     });
 
-    it('should disable next button for ACSS MAP_PROBLEM_LOC_NEXT without coordinates', () => {
-      const props = {
-        ...mockProps,
-        isACSS: true,
-        vzmapCoordinatesFFlag: true,
-        analysis: {
-          ...mockProps.analysis,
-          templateId: 'MAP_PROBLEM_LOC_NEXT'
-        },
-        longitude: '',
-        latitude: ''
-      };
+    it('should handle undefined dataset gracefully', () => {
+      const setLongitude = jest.fn();
+      const setLatitude = jest.fn();
+      const setAddressLine = jest.fn();
+      const setBtnValue = jest.fn();
       
-      const component = render(<TroubleShootingNewPage {...props} />);
-      const nextButton = component.getByTestId('next-button');
-      expect(nextButton).toHaveAttribute('disabled');
-    });
+      const event = {
+        target: {}
+      };
 
-    it('should disable next button for ACSS MID_FLOW_REMEDY template', () => {
-      const props = {
-        ...mockProps,
-        isACSS: true,
-        steps: [
-          { templateId: 'STEP_1' },
-          { templateId: 'MID_FLOW_REMEDY' }
+      TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude, setAddressLine, setBtnValue);
+
+      expect(setLongitude).not.toHaveBeenCalled();
+      expect(setLatitude).not.toHaveBeenCalled();
+      expect(setAddressLine).not.toHaveBeenCalled();
+      expect(setBtnValue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('TroubleShootingNewPage Component', () => {
+    const mockProps = {
+      analysis: {
+        templateId: 'TEST_TEMPLATE',
+        choices: [
+          { text: 'Option 1', value: '1', showCTATop: true },
+          { text: 'Option 2', value: '2', showCTATop: false },
+          { text: 'Network Compatibility', value: '3', showCTATop: false, recommended: true }
         ]
-      };
-      
-      const component = render(<TroubleShootingNewPage {...props} />);
-      const nextButton = component.getByTestId('next-button');
-      expect(nextButton).toHaveAttribute('disabled');
-    });
-  });
+      },
+      steps: [
+        { templateId: 'STEP_1' },
+        { templateId: 'STEP_2' }
+      ],
+      prevStepEnabled: true,
+      nextStepEnabled: true,
+      isACSS: false,
+      vzmapCoordinatesFFlag: false
+    };
 
-  describe('Choice Filtering', () => {
-    it('should add "Please Select" option when no -1 value exists', () => {
-      const props = {
-        ...mockProps,
-        analysis: {
-          ...mockProps.analysis,
-          choices: [
-            { text: 'Option 1', value: '1' },
-            { text: 'Option 2', value: '2' }
+    describe('Navigation Button States', () => {
+      it('should disable prev button when prevStepEnabled is false', () => {
+        const props = {
+          ...mockProps,
+          prevStepEnabled: false
+        };
+        
+        const component = render(<TroubleShootingNewPage {...props} />);
+        const prevButton = component.getByTestId('prev-button');
+        expect(prevButton).toHaveAttribute('disabled');
+      });
+
+      it('should disable next button when nextStepEnabled is false', () => {
+        const props = {
+          ...mockProps,
+          nextStepEnabled: false
+        };
+        
+        const component = render(<TroubleShootingNewPage {...props} />);
+        const nextButton = component.getByTestId('next-button');
+        expect(nextButton).toHaveAttribute('disabled');
+      });
+
+      it('should disable next button for ACSS MAP_PROBLEM_LOC_NEXT without coordinates', () => {
+        const props = {
+          ...mockProps,
+          isACSS: true,
+          vzmapCoordinatesFFlag: true,
+          analysis: {
+            ...mockProps.analysis,
+            templateId: 'MAP_PROBLEM_LOC_NEXT'
+          },
+          longitude: '',
+          latitude: ''
+        };
+        
+        const component = render(<TroubleShootingNewPage {...props} />);
+        const nextButton = component.getByTestId('next-button');
+        expect(nextButton).toHaveAttribute('disabled');
+      });
+
+      it('should disable next button for ACSS MID_FLOW_REMEDY template', () => {
+        const props = {
+          ...mockProps,
+          isACSS: true,
+          steps: [
+            { templateId: 'STEP_1' },
+            { templateId: 'MID_FLOW_REMEDY' }
           ]
-        }
-      };
-      
-      const component = render(<TroubleShootingNewPage {...props} />);
-      const selectOption = component.getByText('Please Select');
-      expect(selectOption).toBeInTheDocument();
+        };
+        
+        const component = render(<TroubleShootingNewPage {...props} />);
+        const nextButton = component.getByTestId('next-button');
+        expect(nextButton).toHaveAttribute('disabled');
+      });
     });
 
-    it('should filter top links correctly', () => {
-      const component = render(<TroubleShootingNewPage {...mockProps} />);
-      const topLinks = component.getAllByTestId('top-link');
-      expect(topLinks).toHaveLength(1);
-      expect(topLinks[0]).toHaveTextContent('Option 1');
+    describe('Choice Filtering', () => {
+      it('should add "Please Select" option when no -1 value exists', () => {
+        const props = {
+          ...mockProps,
+          analysis: {
+            ...mockProps.analysis,
+            choices: [
+              { text: 'Option 1', value: '1' },
+              { text: 'Option 2', value: '2' }
+            ]
+          }
+        };
+        
+        const component = render(<TroubleShootingNewPage {...props} />);
+        const selectOption = component.getByText('Please Select');
+        expect(selectOption).toBeInTheDocument();
+      });
+
+      it('should filter top links correctly', () => {
+        const component = render(<TroubleShootingNewPage {...mockProps} />);
+        const topLinks = component.getAllByTestId('top-link');
+        expect(topLinks).toHaveLength(1);
+        expect(topLinks[0]).toHaveTextContent('Option 1');
+      });
+
+      it('should filter bottom links correctly', () => {
+        const component = render(<TroubleShootingNewPage {...mockProps} />);
+        const bottomLinks = component.getAllByTestId('bottom-link');
+        expect(bottomLinks).toHaveLength(2);
+        expect(bottomLinks).not.toHaveTextContent('Network Extender');
+      });
     });
 
-    it('should filter bottom links correctly', () => {
-      const component = render(<TroubleShootingNewPage {...mockProps} />);
-      const bottomLinks = component.getAllByTestId('bottom-link');
-      expect(bottomLinks).toHaveLength(2);
-      expect(bottomLinks).not.toHaveTextContent('Network Extender');
+    describe('State Management', () => {
+      it('should handle state updates correctly', () => {
+        const component = render(<TroubleShootingNewPage {...mockProps} />);
+        
+        // Test state updates
+        act(() => {
+          component.getByTestId('option-select').change({ target: { value: '1' } });
+        });
+        
+        expect(component.getByTestId('selected-value')).toHaveTextContent('1');
+      });
+
+      it('should handle modal state correctly', () => {
+        const component = render(<TroubleShootingNewPage {...mockProps} />);
+        
+        act(() => {
+          component.getByTestId('modal-trigger').click();
+        });
+        
+        expect(component.getByTestId('modal')).toBeVisible();
+      });
+    });
+
+    describe('Error Handling', () => {
+      it('should handle missing props gracefully', () => {
+        const component = render(<TroubleShootingNewPage />);
+        expect(component.container).toBeInTheDocument();
+      });
+
+      it('should handle empty choices array', () => {
+        const props = {
+          ...mockProps,
+          analysis: {
+            ...mockProps.analysis,
+            choices: []
+          }
+        };
+        
+        const component = render(<TroubleShootingNewPage {...props} />);
+        expect(component.container).toBeInTheDocument();
+      });
     });
   });
 
-  describe('State Management', () => {
-    it('should handle state updates correctly', () => {
-      const component = render(<TroubleShootingNewPage {...mockProps} />);
-      
-      // Test state updates
-      act(() => {
-        component.getByTestId('option-select').change({ target: { value: '1' } });
+  describe('Core Event Handlers', () => {
+    describe('handleModalAction', () => {
+      it('should close modal when action is close', () => {
+        const button = { action: 'close' };
+        const result = TroubleShootingNewPage.handleModalAction(button);
+        
+        expect(result).toEqual({ modalOpen: false });
       });
       
-      expect(component.getByTestId('selected-value')).toHaveTextContent('1');
-    });
-
-    it('should handle modal state correctly', () => {
-      const component = render(<TroubleShootingNewPage {...mockProps} />);
-      
-      act(() => {
-        component.getByTestId('modal-trigger').click();
+      it('should handle continue action with redirection', () => {
+        const button = { 
+          action: 'continue', 
+          type: 'url', 
+          url: 'https://test.com' 
+        };
+        const redirectFn = jest.fn();
+        
+        const result = TroubleShootingNewPage.handleModalAction(button, redirectFn);
+        
+        expect(result).toEqual({ modalOpen: false, actionTaken: 'continue' });
+        expect(redirectFn).toHaveBeenCalledWith('https://test.com');
       });
       
-      expect(component.getByTestId('modal')).toBeVisible();
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle missing props gracefully', () => {
-      const component = render(<TroubleShootingNewPage />);
-      expect(component.container).toBeInTheDocument();
-    });
-
-    it('should handle empty choices array', () => {
-      const props = {
-        ...mockProps,
-        analysis: {
-          ...mockProps.analysis,
-          choices: []
-        }
-      };
-      
-      const component = render(<TroubleShootingNewPage {...props} />);
-      expect(component.container).toBeInTheDocument();
-    });
-  });
-});
-
-describe('Core Event Handlers', () => {
-  describe('handleModalAction', () => {
-    it('should close modal when action is close', () => {
-      const button = { action: 'close' };
-      const result = TroubleShootingNewPage.handleModalAction(button);
-      
-      expect(result).toEqual({ modalOpen: false });
-    });
-    
-    it('should handle continue action with redirection', () => {
-      const button = { 
-        action: 'continue', 
-        type: 'url', 
-        url: 'https://test.com' 
-      };
-      const redirectFn = jest.fn();
-      
-      const result = TroubleShootingNewPage.handleModalAction(button, redirectFn);
-      
-      expect(result).toEqual({ modalOpen: false, actionTaken: 'continue' });
-      expect(redirectFn).toHaveBeenCalledWith('https://test.com');
-    });
-    
-    it('should handle cancel action', () => {
-      const button = { action: 'cancel' };
-      const result = TroubleShootingNewPage.handleModalAction(button);
-      
-      expect(result).toEqual({ modalOpen: false, actionTaken: 'cancel' });
-    });
-    
-    it('should keep modal open for unknown actions', () => {
-      const button = { action: 'unknown' };
-      const result = TroubleShootingNewPage.handleModalAction(button);
-      
-      expect(result).toEqual({ modalOpen: true });
-    });
-    
-    it('should handle null button gracefully', () => {
-      const result = TroubleShootingNewPage.handleModalAction(null);
-      expect(result).toBe(false);
-    });
-  });
-  
-  describe('handleButtonAction', () => {
-    it('should handle next action with selected option', () => {
-      const button = { action: 'next' };
-      const selectedOption = 'option1';
-      
-      const result = TroubleShootingNewPage.handleButtonAction(selectedOption, button);
-      
-      expect(result).toEqual({ nextStep: true, option: 'option1' });
-    });
-    
-    it('should handle redirect action', () => {
-      const button = { 
-        action: 'redirect', 
-        url: 'https://test.com' 
-      };
-      const redirectFn = jest.fn();
-      
-      const result = TroubleShootingNewPage.handleButtonAction('', button, redirectFn);
-      
-      expect(result).toEqual({ redirected: true, url: 'https://test.com' });
-      expect(redirectFn).toHaveBeenCalledWith('https://test.com');
-    });
-    
-    it('should handle cancel action', () => {
-      const button = { action: 'cancel' };
-      
-      const result = TroubleShootingNewPage.handleButtonAction('', button);
-      
-      expect(result).toEqual({ canceled: true });
-    });
-    
-    it('should return false for unknown actions', () => {
-      const button = { action: 'unknown' };
-      
-      const result = TroubleShootingNewPage.handleButtonAction('', button);
-      
-      expect(result).toBe(false);
-    });
-    
-    it('should handle null button gracefully', () => {
-      const result = TroubleShootingNewPage.handleButtonAction('option1', null);
-      expect(result).toBe(false);
-    });
-  });
-  
-  describe('handleAction', () => {
-    it('should handle continue action', () => {
-      const button = { action: 'continue' };
-      const handleContinue = jest.fn();
-      
-      const result = TroubleShootingNewPage.handleAction(button, false, {
-        handleContinue
+      it('should handle cancel action', () => {
+        const button = { action: 'cancel' };
+        const result = TroubleShootingNewPage.handleModalAction(button);
+        
+        expect(result).toEqual({ modalOpen: false, actionTaken: 'cancel' });
       });
       
-      expect(result).toEqual({ action: 'continue' });
-      expect(handleContinue).toHaveBeenCalled();
-    });
-    
-    it('should handle continue action from popup', () => {
-      const button = { action: 'continue' };
-      const handleContinue = jest.fn();
-      
-      const result = TroubleShootingNewPage.handleAction(button, true, {
-        handleContinue
+      it('should keep modal open for unknown actions', () => {
+        const button = { action: 'unknown' };
+        const result = TroubleShootingNewPage.handleModalAction(button);
+        
+        expect(result).toEqual({ modalOpen: true });
       });
       
-      expect(result).toEqual({ fromPopup: true, action: 'continue' });
-      expect(handleContinue).not.toHaveBeenCalled();
-    });
-    
-    it('should handle cancel action', () => {
-      const button = { action: 'cancel' };
-      const handleCancel = jest.fn();
-      
-      const result = TroubleShootingNewPage.handleAction(button, false, {
-        handleCancel
-      });
-      
-      expect(result).toEqual({ action: 'cancel' });
-      expect(handleCancel).toHaveBeenCalled();
-    });
-    
-    it('should handle showModal action', () => {
-      const modalParams = { heading: 'Test', description: 'Test description' };
-      const button = { action: 'showModal', modalParams };
-      const triggerModalState = jest.fn();
-      
-      const result = TroubleShootingNewPage.handleAction(button, false, {
-        triggerModalState
-      });
-      
-      expect(result).toEqual({ action: 'showModal' });
-      expect(triggerModalState).toHaveBeenCalledWith({ 
-        show: true, 
-        heading: 'Test', 
-        description: 'Test description'
+      it('should handle null button gracefully', () => {
+        const result = TroubleShootingNewPage.handleModalAction(null);
+        expect(result).toBe(false);
       });
     });
     
-    it('should return false for unknown actions', () => {
-      const button = { action: 'unknown' };
+    describe('handleButtonAction', () => {
+      it('should handle next action with selected option', () => {
+        const button = { action: 'next' };
+        const selectedOption = 'option1';
+        
+        const result = TroubleShootingNewPage.handleButtonAction(selectedOption, button);
+        
+        expect(result).toEqual({ nextStep: true, option: 'option1' });
+      });
       
-      const result = TroubleShootingNewPage.handleAction(button);
+      it('should handle redirect action', () => {
+        const button = { 
+          action: 'redirect', 
+          url: 'https://test.com' 
+        };
+        const redirectFn = jest.fn();
+        
+        const result = TroubleShootingNewPage.handleButtonAction('', button, redirectFn);
+        
+        expect(result).toEqual({ redirected: true, url: 'https://test.com' });
+        expect(redirectFn).toHaveBeenCalledWith('https://test.com');
+      });
       
-      expect(result).toBe(false);
-    });
-  });
-  
-  describe('handleContinueButton', () => {
-    it('should navigate to next step', () => {
-      const navigateFn = jest.fn();
+      it('should handle cancel action', () => {
+        const button = { action: 'cancel' };
+        
+        const result = TroubleShootingNewPage.handleButtonAction('', button);
+        
+        expect(result).toEqual({ canceled: true });
+      });
       
-      const result = TroubleShootingNewPage.handleContinueButton(navigateFn);
+      it('should return false for unknown actions', () => {
+        const button = { action: 'unknown' };
+        
+        const result = TroubleShootingNewPage.handleButtonAction('', button);
+        
+        expect(result).toBe(false);
+      });
       
-      expect(result).toEqual({ navigated: true, direction: 'next' });
-      expect(navigateFn).toHaveBeenCalledWith('next');
+      it('should handle null button gracefully', () => {
+        const result = TroubleShootingNewPage.handleButtonAction('option1', null);
+        expect(result).toBe(false);
+      });
     });
     
-    it('should work without callback', () => {
-      const result = TroubleShootingNewPage.handleContinueButton();
-      
-      expect(result).toEqual({ navigated: true, direction: 'next' });
-    });
-  });
-  
-  describe('handleResumeEmailSend', () => {
-    it('should successfully send email', async () => {
-      const payload = { email: 'test@example.com', type: 'resume' };
-      const apiCall = jest.fn().mockResolvedValue({ success: true });
-      const updateState = jest.fn();
-      
-      const result = await TroubleShootingNewPage.handleResumeEmailSend(payload, {
-        apiCall,
-        updateState
+    describe('handleAction', () => {
+      it('should handle continue action', () => {
+        const button = { action: 'continue' };
+        const handleContinue = jest.fn();
+        
+        const result = TroubleShootingNewPage.handleAction(button, false, {
+          handleContinue
+        });
+        
+        expect(result).toEqual({ action: 'continue' });
+        expect(handleContinue).toHaveBeenCalled();
       });
       
-      expect(result).toEqual({ success: true });
-      expect(apiCall).toHaveBeenCalledWith('test@example.com', 'resume');
-      expect(updateState).toHaveBeenCalledWith({ emailSent: true });
+      it('should handle continue action from popup', () => {
+        const button = { action: 'continue' };
+        const handleContinue = jest.fn();
+        
+        const result = TroubleShootingNewPage.handleAction(button, true, {
+          handleContinue
+        });
+        
+        expect(result).toEqual({ fromPopup: true, action: 'continue' });
+        expect(handleContinue).not.toHaveBeenCalled();
+      });
+      
+      it('should handle cancel action', () => {
+        const button = { action: 'cancel' };
+        const handleCancel = jest.fn();
+        
+        const result = TroubleShootingNewPage.handleAction(button, false, {
+          handleCancel
+        });
+        
+        expect(result).toEqual({ action: 'cancel' });
+        expect(handleCancel).toHaveBeenCalled();
+      });
+      
+      it('should handle showModal action', () => {
+        const modalParams = { heading: 'Test', description: 'Test description' };
+        const button = { action: 'showModal', modalParams };
+        const triggerModalState = jest.fn();
+        
+        const result = TroubleShootingNewPage.handleAction(button, false, {
+          triggerModalState
+        });
+        
+        expect(result).toEqual({ action: 'showModal' });
+        expect(triggerModalState).toHaveBeenCalledWith({ 
+          show: true, 
+          heading: 'Test', 
+          description: 'Test description'
+        });
+      });
+      
+      it('should return false for unknown actions', () => {
+        const button = { action: 'unknown' };
+        
+        const result = TroubleShootingNewPage.handleAction(button);
+        
+        expect(result).toBe(false);
+      });
     });
     
-    it('should handle API failure', async () => {
-      const payload = { email: 'test@example.com', type: 'resume' };
-      const apiCall = jest.fn().mockResolvedValue({ 
-        success: false, 
-        error: 'API error' 
-      });
-      const errorHandler = jest.fn();
-      
-      const result = await TroubleShootingNewPage.handleResumeEmailSend(payload, {
-        apiCall,
-        errorHandler
+    describe('handleContinueButton', () => {
+      it('should navigate to next step', () => {
+        const navigateFn = jest.fn();
+        
+        const result = TroubleShootingNewPage.handleContinueButton(navigateFn);
+        
+        expect(result).toEqual({ navigated: true, direction: 'next' });
+        expect(navigateFn).toHaveBeenCalledWith('next');
       });
       
-      expect(result).toEqual({ success: false, error: 'API error' });
-      expect(errorHandler).toHaveBeenCalledWith('API error');
+      it('should work without callback', () => {
+        const result = TroubleShootingNewPage.handleContinueButton();
+        
+        expect(result).toEqual({ navigated: true, direction: 'next' });
+      });
     });
     
-    it('should validate email presence', async () => {
-      const payload = { type: 'resume' };
-      const errorHandler = jest.fn();
-      
-      const result = await TroubleShootingNewPage.handleResumeEmailSend(payload, {
-        errorHandler
+    describe('handleResumeEmailSend', () => {
+      it('should successfully send email', async () => {
+        const payload = { email: 'test@example.com', type: 'resume' };
+        const apiCall = jest.fn().mockResolvedValue({ success: true });
+        const updateState = jest.fn();
+        
+        const result = await TroubleShootingNewPage.handleResumeEmailSend(payload, {
+          apiCall,
+          updateState
+        });
+        
+        expect(result).toEqual({ success: true });
+        expect(apiCall).toHaveBeenCalledWith('test@example.com', 'resume');
+        expect(updateState).toHaveBeenCalledWith({ emailSent: true });
       });
       
-      expect(result).toEqual({ success: false, error: 'Email is required' });
-      expect(errorHandler).toHaveBeenCalledWith('Email is required');
-    });
-    
-    it('should handle exceptions', async () => {
-      const payload = { email: 'test@example.com', type: 'resume' };
-      const apiCall = jest.fn().mockRejectedValue(new Error('Network error'));
-      const errorHandler = jest.fn();
-      
-      const result = await TroubleShootingNewPage.handleResumeEmailSend(payload, {
-        apiCall,
-        errorHandler
+      it('should handle API failure', async () => {
+        const payload = { email: 'test@example.com', type: 'resume' };
+        const apiCall = jest.fn().mockResolvedValue({ 
+          success: false, 
+          error: 'API error' 
+        });
+        const errorHandler = jest.fn();
+        
+        const result = await TroubleShootingNewPage.handleResumeEmailSend(payload, {
+          apiCall,
+          errorHandler
+        });
+        
+        expect(result).toEqual({ success: false, error: 'API error' });
+        expect(errorHandler).toHaveBeenCalledWith('API error');
       });
       
-      expect(result).toEqual({ success: false, error: 'Network error' });
-      expect(errorHandler).toHaveBeenCalledWith('Network error');
+      it('should validate email presence', async () => {
+        const payload = { type: 'resume' };
+        const errorHandler = jest.fn();
+        
+        const result = await TroubleShootingNewPage.handleResumeEmailSend(payload, {
+          errorHandler
+        });
+        
+        expect(result).toEqual({ success: false, error: 'Email is required' });
+        expect(errorHandler).toHaveBeenCalledWith('Email is required');
+      });
+      
+      it('should handle exceptions', async () => {
+        const payload = { email: 'test@example.com', type: 'resume' };
+        const apiCall = jest.fn().mockRejectedValue(new Error('Network error'));
+        const errorHandler = jest.fn();
+        
+        const result = await TroubleShootingNewPage.handleResumeEmailSend(payload, {
+          apiCall,
+          errorHandler
+        });
+        
+        expect(result).toEqual({ success: false, error: 'Network error' });
+        expect(errorHandler).toHaveBeenCalledWith('Network error');
+      });
     });
   });
 });
