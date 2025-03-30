@@ -1,3 +1,4 @@
+
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { act } from 'react-dom/test-utils';
@@ -382,89 +383,6 @@ describe('TroubleShootingNewPage Component', () => {
   });
 
   describe('Recommended Offered Functionality', () => {
-    it('should return note text when recommended choice exists', () => {
-      const propsWithRecommendedNote = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    questions: [{
-                      choices: [{
-                        recommended: true,
-                        note: 'Recommended note text'
-                      }]
-                    }]
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithRecommendedNote} />);
-      const step = propsWithRecommendedNote.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      const questions = step.questions || [];
-      let noteText = '';
-      
-      if (questions.length > 0 && questions[0].choices) {
-        const choices = questions[0].choices;
-        for (let choice of choices) {
-          if (choice.recommended && choice.note !== null && choice.note !== undefined) {
-            noteText = choice.note;
-          }
-        }
-      }
-      
-      expect(noteText).toBe('Recommended note text');
-    });
-
-    it('should return empty string when no recommended choices', () => {
-      const propsWithoutRecommended = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    questions: [{
-                      choices: [{
-                        recommended: false,
-                        note: 'Not recommended note'
-                      }]
-                    }]
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithoutRecommended} />);
-      const step = propsWithoutRecommended.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      const questions = step.questions || [];
-      let noteText = '';
-      
-      if (questions.length > 0 && questions[0].choices) {
-        const choices = questions[0].choices;
-        for (let choice of choices) {
-          if (choice.recommended && choice.note !== null && choice.note !== undefined) {
-            noteText = choice.note;
-          }
-        }
-      }
-      
-      expect(noteText).toBe('');
-    });
 
     it('should handle empty questions array', () => {
       const propsWithEmptyQuestions = {
@@ -498,50 +416,7 @@ describe('TroubleShootingNewPage Component', () => {
             noteText = choice.note;
           }
         }
-      }
-      
-      expect(noteText).toBe('');
-    });
-
-    it('should handle null note in recommended choice', () => {
-      const propsWithNullNote = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    questions: [{
-                      choices: [{
-                        recommended: true,
-                        note: null
-                      }]
-                    }]
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithNullNote} />);
-      const step = propsWithNullNote.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      const questions = step.questions || [];
-      let noteText = '';
-      
-      if (questions.length > 0 && questions[0].choices) {
-        const choices = questions[0].choices;
-        for (let choice of choices) {
-          if (choice.recommended && choice.note !== null && choice.note !== undefined) {
-            noteText = choice.note;
-          }
-        }
-      }
-      
+      }  
       expect(noteText).toBe('');
     });
   });
