@@ -259,7 +259,7 @@ describe('TroubleShootingNewPage Component', () => {
       };
 
       renderWithRouter(<TroubleShootingNewPage {...propsWithDigitalButton} />);
-      const digitalButton = screen.getByText('Digital Action');
+      const digitalButton = screen.getByRole('button', { name: /digital action/i });
       await act(async () => {
         fireEvent.click(digitalButton);
       });
