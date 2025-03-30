@@ -58,22 +58,67 @@ const renderWithContexts = (ui, { route = '/' } = {}) => {
 };
 
 describe('TroubleShootingNewPage', () => {
-  const defaultProps = {
-    functions: {
-      handleTroubleShootingAction: jest.fn(),
-      handleAction: jest.fn(),
-      processTroubleShootingPage: jest.fn()
-    },
-    values: {
-      troubleShootingInfo: sessionUtility.getTroubleShootingJson(),
+  // Helper function to create props with default values
+  const createTestProps = ({
+    functions = {
+      handleTroubleShootingAction: () => {},
+      handleAction: () => {},
+      processTroubleShootingPage: () => {}
+    } = {},
+    values = {
+      troubleShootingInfo: sessionUtility.getTroubleShootingJson() || {
+        ddata: {
+          output: {
+            pageContent: {
+              steps: []
+            },
+            navHist: []
+          }
+        }
+      },
       landingInfo: {},
       symptom: {},
       selectedIssueOptionStep: '',
       thumbsDownSubmittedStep: false
+    } = {}
+  } = {}) => ({
+    functions: {
+      handleTroubleShootingAction: jest.fn(functions.handleTroubleShootingAction),
+      handleAction: jest.fn(functions.handleAction),
+      processTroubleShootingPage: jest.fn(functions.processTroubleShootingPage)
+    },
+    values: {
+      troubleShootingInfo: values.troubleShootingInfo,
+      landingInfo: values.landingInfo || {},
+      symptom: values.symptom || {},
+      selectedIssueOptionStep: values.selectedIssueOptionStep || '',
+      thumbsDownSubmittedStep: values.thumbsDownSubmittedStep || false
     }
-  };
+  });
 
   it('renders without crashing', () => {
-    renderWithContexts(<WrappedComponent {...defaultProps} />);
+    const props = createTestProps();
+    renderWithContexts(<WrappedComponent {...props} />);
+  });
+
+  it('renders with custom props', () => {
+    const customProps = createTestProps({
+      values: {
+        troubleShootingInfo: {
+          ddata: {
+            output: {
+              pageContent: {
+                steps: [{
+                  id: 'test-step',
+                  title: 'Test Step'
+                }]
+              },
+              navHist: []
+            }
+          }
+        }
+      }
+    });
+    renderWithContexts(<WrappedComponent {...customProps} />);
   });
 });
