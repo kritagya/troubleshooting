@@ -16,10 +16,19 @@ jest.mock('react-router-dom', () => ({
   })
 }));
 
+// Fix the mock path for sessionUtility
 jest.mock('../../../../../../../utils/sessionUtility', () => ({
-  getTroubleShootingJson: jest.fn(() => ({})),
-  getMvoConfig: jest.fn(() => ({})),
-  getCaseDetails: jest.fn(() => ({}))
+  sessionUtility: {
+    getTroubleShootingJson: jest.fn(() => ({
+      ddata: {
+        device: {
+          is5GDevice: false
+        }
+      }
+    })),
+    getMvoConfig: jest.fn(() => ({})),
+    getCaseDetails: jest.fn(() => ({}))
+  }
 }));
 
 // Import the actual component
