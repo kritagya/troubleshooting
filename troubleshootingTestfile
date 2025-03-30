@@ -4,11 +4,9 @@ import React from 'react';
 import { sessionUtility } from '../../../shared/utilities/session';
 import { withRouter, Router } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
-import { ModalContext } from '../../../shared/contexts/ModalContext';
-import { ConfigContext } from '../../../shared/contexts/ConfigContext';
-import { ParamsContext } from '../../../shared/contexts/ParamsContext';
-import { UiLoggerContext } from '../../../shared/contexts/UiLoggerContext';
-
+import { ModalContext } from '../../../../NSATRG/templates/TroubleShooting/ModalContext';
+import { ConfigContext } from "../../../../../IssueSelector";
+import { ParamsContext } from  "../../../../../IssueSelector";
 // Import the actual component
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
@@ -46,18 +44,12 @@ const renderWithContexts = (ui, { route = '/' } = {}) => {
     paramsDetails: {}
   };
 
-  const uiLoggerContextValue = {
-    logUIEvent: jest.fn()
-  };
-
   return render(
     <Router history={history}>
       <ModalContext.Provider value={modalContextValue}>
         <ConfigContext.Provider value={configContextValue}>
           <ParamsContext.Provider value={paramsContextValue}>
-            <UiLoggerContext.Provider value={uiLoggerContextValue}>
               {ui}
-            </UiLoggerContext.Provider>
           </ParamsContext.Provider>
         </ConfigContext.Provider>
       </ModalContext.Provider>
