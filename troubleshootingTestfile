@@ -4,21 +4,43 @@ import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { sessionUtility } from '../../../shared/utilities/session';
+import { withRouter, Router } from 'react-router-dom';
+import { createMemoryHistory } from 'history';
 
-// Mock only react-router-dom
-jest.mock('react-router-dom', () => ({
-  useHistory: () => ({
-    push: jest.fn(),
-    location: { hash: '' }
-  }),
-  useLocation: () => ({
-    hash: '',
-    pathname: '/test'
-  })
-}));
+// Mock react-router-dom
+jest.mock('react-router-dom', () => {
+  const originalModule = jest.requireActual('react-router-dom');
+  return {
+    ...originalModule,
+    useHistory: () => ({
+      push: jest.fn(),
+      location: { hash: '' }
+    }),
+    useLocation: () => ({
+      hash: '',
+      pathname: '/test'
+    })
+  };
+});
 
 // Import the actual component
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
+
+// Create a wrapped version of the component
+const WrappedComponent = withRouter(TroubleShootingNewPage);
+
+// Helper function to render with router
+const renderWithRouter = (ui, { route = '/' } = {}) => {
+  const history = createMemoryHistory({ initialEntries: [route] });
+  return {
+    ...render(
+      <Router history={history}>
+        {ui}
+      </Router>
+    ),
+    history
+  };
+};
 
 // Cleanup after each test
 afterEach(() => {
@@ -46,7 +68,7 @@ describe('TroubleShootingNewPage Component', () => {
 
   describe('Component Rendering', () => {
     it('should render with basic props', () => {
-      render(<TroubleShootingNewPage {...defaultProps} />);
+      renderWithRouter(<WrappedComponent {...defaultProps} />);
       const troubleshootingData = sessionUtility.getTroubleShootingJson();
       const step = troubleshootingData.ddata.output.pageContent.steps[0];
       expect(screen.getByText(step.title)).toBeInTheDocument();
@@ -63,7 +85,7 @@ describe('TroubleShootingNewPage Component', () => {
         }
       };
 
-      render(<TroubleShootingNewPage {...props} />);
+      renderWithRouter(<WrappedComponent {...props} />);
       const step = troubleshootingData.ddata.output.pageContent.steps[0];
       if (step.imageDetails && step.imageDetails.length > 0) {
         expect(screen.getByAltText(step.imageDetails[0].alt)).toBeInTheDocument();
@@ -74,7 +96,7 @@ describe('TroubleShootingNewPage Component', () => {
   describe('User Interactions', () => {
     describe('Button Actions', () => {
       it('should handle continue button click', () => {
-        render(<TroubleShootingNewPage {...defaultProps} />);
+        renderWithRouter(<WrappedComponent {...defaultProps} />);
         
         const continueButton = screen.getByRole('button', { name: /continue/i });
         fireEvent.click(continueButton);
@@ -83,7 +105,7 @@ describe('TroubleShootingNewPage Component', () => {
       });
 
       it('should handle cancel button click', () => {
-        render(<TroubleShootingNewPage {...defaultProps} />);
+        renderWithRouter(<WrappedComponent {...defaultProps} />);
         
         const cancelButton = screen.getByRole('button', { name: /cancel/i });
         fireEvent.click(cancelButton);
@@ -103,7 +125,7 @@ describe('TroubleShootingNewPage Component', () => {
           }
         };
 
-        render(<TroubleShootingNewPage {...props} />);
+        renderWithRouter(<WrappedComponent {...props} />);
         
         const step = troubleshootingData.ddata.output.pageContent.steps[0];
         if (step.choices && step.choices.length > 0) {
@@ -136,7 +158,7 @@ describe('TroubleShootingNewPage Component', () => {
         }
       };
 
-      render(<TroubleShootingNewPage {...props} />);
+      renderWithRouter(<WrappedComponent {...props} />);
       
       const nextButton = screen.getByRole('button', { name: /next/i });
       const prevButton = screen.getByRole('button', { name: /previous/i });
@@ -151,7 +173,7 @@ describe('TroubleShootingNewPage Component', () => {
 
   describe('Email Functionality', () => {
     it('should handle email sending', async () => {
-      render(<TroubleShootingNewPage {...defaultProps} />);
+      renderWithRouter(<WrappedComponent {...defaultProps} />);
       
       const emailButton = screen.getByRole('button', { name: /send email/i });
       const emailInput = screen.getByRole('textbox', { name: /email/i });
@@ -175,7 +197,7 @@ describe('TroubleShootingNewPage Component', () => {
         new Error('API Error')
       );
       
-      render(<TroubleShootingNewPage {...defaultProps} />);
+      renderWithRouter(<WrappedComponent {...defaultProps} />);
       
       const actionButton = screen.getByRole('button', { name: /continue/i });
       fireEvent.click(actionButton);
@@ -188,7 +210,7 @@ describe('TroubleShootingNewPage Component', () => {
 
   describe('Component Lifecycle', () => {
     it('should clean up on unmount', () => {
-      const { unmount } = render(<TroubleShootingNewPage {...defaultProps} />);
+      const { unmount } = renderWithRouter(<WrappedComponent {...defaultProps} />);
       
       unmount();
       
