@@ -17,19 +17,29 @@ jest.mock('react-router-dom', () => ({
 }));
 
 // Fix the mock path for sessionUtility
-jest.mock('../../../../../../../utils/sessionUtility', () => ({
-  sessionUtility: {
-    getTroubleShootingJson: jest.fn(() => ({
-      ddata: {
-        device: {
-          is5GDevice: false
-        }
+const mockSessionUtility = {
+  getTroubleShootingJson: jest.fn(() => ({
+    ddata: {
+      output: {
+        pageContent: {
+          steps: [{
+            templateId: 'TEST_TEMPLATE',
+            title: 'Test Step',
+            description: 'Test Description'
+          }]
+        },
+        navHist: []
       }
-    })),
-    getMvoConfig: jest.fn(() => ({})),
-    getCaseDetails: jest.fn(() => ({}))
-  }
-}));
+    }
+  })),
+  getMvoConfig: jest.fn(() => ({})),
+  getCaseDetails: jest.fn(() => ({}))
+};
+
+jest.mock('../../../../../../../shared/utilities/sessionUtility', () => mockSessionUtility);
+
+// Make mock available globally
+global.sessionUtility = mockSessionUtility;
 
 // Import the actual component
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
