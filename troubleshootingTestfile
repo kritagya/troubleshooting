@@ -1,180 +1,23 @@
-import '@testing-library/jest-dom';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
-import userEvent from '@testing-library/user-event';
-import React from 'react';
-import { Router } from 'react-router-dom';
-import { createMemoryHistory } from 'history';
-import TroubleShootingNewPage from '../TroubleShootingNewPage';
-import { UserProvider } from '../ModalContext';
-import { UiLoggerContext } from '../../TroubleShooting/app'
-
-// Mock dependencies
-const mockHistoryPush = jest.fn();
-const mockLocation = {
-  hash: '',
-  pathname: '/test',
-  search: '',
-  state: {}
-};
-
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useHistory: () => ({
-    push: mockHistoryPush,
-    location: mockLocation
-  }),
-  useLocation: () => mockLocation
-}));
-
-// Cleanup after each test
-afterEach(() => {
-  cleanup();
-  jest.clearAllMocks();
-  sessionStorage.clear();
-  localStorage.clear();
-});
-
-describe('TroubleShootingNewPage Component', () => {
-  const history = createMemoryHistory();
-  
-  const defaultProps = {
-    functions: {
-      handleTroubleShootingAction: jest.fn(),
-      handleAction: jest.fn(),
-      processTroubleShootingPage: jest.fn()
-    },
-    values: {
-      troubleShootingInfo: {
-        ddata: {
-          output: {
-            pageContent: {
-              steps: [{
-                templateId: 'TEST_TEMPLATE',
-                title: 'Test Step',
-                description: 'Test Description',
-                choices: []
-              }]
-            },
-            navHist: []
-          }
-        }
-      },
-      landingInfo: {},
-      symptom: {},
-      selectedIssueOptionStep: '',
-      thumbsDownSubmittedStep: false,
-      analysis: { title: 'Test Analysis' },
-      resolution: { title: 'Test Resolution' },
-      currentPageId: 'test-page-id'
-    },
-    history,
-    location: history.location,
-    match: {
-      params: {},
-      path: '/test',
-      url: '/test'
-    }
-  };
-
-  const modalValue = {
-    additionalInfoSteps: [],
-    setAdditionalInfoSteps: jest.fn(),
-    showModal: false,
-    setShowModal: jest.fn(),
-    modalParams: {
-      title: '',
-      body: '',
-      primaryButton: { text: '', actionData: '' },
-      secondaryButton: { text: '', actionData: '' }
-    },
-    setModalParams: jest.fn()
-  };
-
-  const uiLoggerValue = {
-    setPageDetails: jest.fn().mockImplementation((details) => {
-      uiLoggerValue.pageDetails = { ...details };
-      return Promise.resolve();
-    }),
-    pageDetails: {},
-    logClickStream: jest.fn().mockImplementation(() => Promise.resolve()),
-    logJSError: jest.fn().mockImplementation(() => Promise.resolve()),
-    logPageView: jest.fn().mockImplementation(() => Promise.resolve()),
-    logCustomEvent: jest.fn().mockImplementation(() => Promise.resolve())
-  };
-
-  const renderWithRouter = (ui, { route = '/test' } = {}) => {
-    history.push(route);
-    return render(
-      <Router history={history}>
-        <UiLoggerContext.Provider value={uiLoggerValue}>
-          <UserProvider value={modalValue}>
-            {ui}
-          </UserProvider>
-        </UiLoggerContext.Provider>
-      </Router>
-    );
-  };
-
-  describe('Component Rendering', () => {
-    it('should render with basic props', () => {
+describe('TroubleShootingNewPage', () => {
+  describe('Button Handlers', () => {
+    it('should handle continue button click', () => {
       renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      expect(screen.getByText('Test Step')).toBeInTheDocument();
-      expect(screen.getByText('Test Description')).toBeInTheDocument();
+      const continueButton = screen.getByRole('button', { name: /continue/i });
+      fireEvent.click(continueButton);
+      expect(defaultProps.functions.processTroubleShootingPage).toHaveBeenCalled();
     });
 
-    it('should update page details', () => {
+    it('should handle cancel button click', () => {
       renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      expect(uiLoggerValue.setPageDetails).toHaveBeenCalledWith(
-        expect.objectContaining({
-          pageTitle: expect.any(String),
-          pageName: expect.stringContaining('4G Troubleshooting'),
-          flowName: '4G Troubleshooting'
-        })
-      );
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+      fireEvent.click(cancelButton);
+      expect(modalValue.setShowModal).toHaveBeenCalled();
     });
   });
 
-  describe('Component Lifecycle', () => {
-    it('should clean up on unmount', () => {
-      const { unmount } = renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      
-      unmount();
-      
-      // Verify cleanup
-      expect(document.getElementsByClassName('INVOKE_OVERLAY')).toHaveLength(0);
-    });
-  });
-
-  describe('Basic Component Functionality', () => {
-    it('should receive props correctly', () => {
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      const step = defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      expect(step.templateId).toBe('TEST_TEMPLATE');
-      expect(step.title).toBe('Test Step');
-    });
-
-    it('should have required context providers', () => {
-      const { container } = renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      expect(container).toBeInTheDocument();
-      expect(modalValue.setShowModal).toBeDefined();
-      expect(uiLoggerValue.setPageDetails).toBeDefined();
-    });
-
-    it('should handle modal state changes', () => {
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      
-      // Simulate modal state change
-      act(() => {
-        modalValue.setShowModal(true);
-      });
-      
-      expect(modalValue.setShowModal).toHaveBeenCalledWith(true);
-      expect(modalValue.setShowModal).toHaveBeenCalledTimes(1);
-    });
-
-    it('should render with custom step data', () => {
-      const customProps = {
+  describe('Icon Rendering', () => {
+    it('should render email icon when available', () => {
+      const propsWithEmail = {
         ...defaultProps,
         values: {
           ...defaultProps.values,
@@ -183,22 +26,93 @@ describe('TroubleShootingNewPage Component', () => {
               output: {
                 pageContent: {
                   steps: [{
-                    templateId: 'CUSTOM_TEMPLATE',
-                    title: 'Custom Step',
-                    description: 'Custom Description',
-                    choices: [{ text: 'Option 1' }]
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    showEmailIcon: true
                   }]
-                },
-                navHist: []
+                }
               }
             }
           }
         }
       };
+      renderWithRouter(<TroubleShootingNewPage {...propsWithEmail} />);
+      const emailIcon = screen.getByTestId('email-icon');
+      expect(emailIcon).toBeInTheDocument();
+    });
 
-      renderWithRouter(<TroubleShootingNewPage {...customProps} />);
-      expect(screen.getByText('Custom Step')).toBeInTheDocument();
-      expect(screen.getByText('Custom Description')).toBeInTheDocument();
+    it('should render SMS icon when available', () => {
+      const propsWithSMS = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    showSMSIcon: true
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+      renderWithRouter(<TroubleShootingNewPage {...propsWithSMS} />);
+      const smsIcon = screen.getByTestId('sms-icon');
+      expect(smsIcon).toBeInTheDocument();
+    });
+  });
+
+  describe('Content Rendering', () => {
+    it('should render footer note when provided', () => {
+      const propsWithFooter = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    footNote: 'Test footer note'
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+      renderWithRouter(<TroubleShootingNewPage {...propsWithFooter} />);
+      expect(screen.getByText('Test footer note')).toBeInTheDocument();
+    });
+
+    it('should handle accordion toggle', () => {
+      const propsWithAccordion = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    isAccordion: true,
+                    accordionTitle: 'Test Accordion'
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+      renderWithRouter(<TroubleShootingNewPage {...propsWithAccordion} />);
+      const accordion = screen.getByText('Test Accordion');
+      fireEvent.click(accordion);
+      expect(accordion).toHaveAttribute('aria-expanded', 'true');
     });
   });
 });
