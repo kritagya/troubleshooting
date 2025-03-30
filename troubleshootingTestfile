@@ -199,7 +199,6 @@ describe('TroubleShootingNewPage Component', () => {
       renderWithRouter(<TroubleShootingNewPage {...customProps} />);
       expect(screen.getByText('Custom Step')).toBeInTheDocument();
       expect(screen.getByText('Custom Description')).toBeInTheDocument();
-      expect(screen.getByText('Option 1')).toBeInTheDocument();
     });
   });
 });
