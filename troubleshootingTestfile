@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { render } from '@testing-library/react';
 import React from 'react';
-import { BrowserRouter, withRouter } from 'react-router-dom';
+import { MemoryRouter, Route } from 'react-router-dom';
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
 // Create contexts
@@ -51,20 +51,20 @@ describe('TroubleShootingNewPage', () => {
       }
     };
 
-    const Component = withRouter(TroubleShootingNewPage);
-
     render(
-      <BrowserRouter>
+      <MemoryRouter initialEntries={['/test']}>
         <UiLoggerContext.Provider value={uiLoggerValue}>
           <ModalContext.Provider value={modalValue}>
             <ConfigContext.Provider value={{ paramsDetails: { channel: 'CARE' } }}>
               <ParamsContext.Provider value={{ paramsDetails: {} }}>
-                <Component {...props} />
+                <Route>
+                  {routeProps => <TroubleShootingNewPage {...props} {...routeProps} />}
+                </Route>
               </ParamsContext.Provider>
             </ConfigContext.Provider>
           </ModalContext.Provider>
         </UiLoggerContext.Provider>
-      </BrowserRouter>
+      </MemoryRouter>
     );
   });
 });
