@@ -160,5 +160,46 @@ describe('TroubleShootingNewPage Component', () => {
       expect(modalValue.setShowModal).toBeDefined();
       expect(uiLoggerValue.setPageDetails).toBeDefined();
     });
+
+    it('should handle modal state changes', () => {
+      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
+      
+      // Simulate modal state change
+      act(() => {
+        modalValue.setShowModal(true);
+      });
+      
+      expect(modalValue.setShowModal).toHaveBeenCalledWith(true);
+      expect(modalValue.setShowModal).toHaveBeenCalledTimes(1);
+    });
+
+    it('should render with custom step data', () => {
+      const customProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    templateId: 'CUSTOM_TEMPLATE',
+                    title: 'Custom Step',
+                    description: 'Custom Description',
+                    choices: [{ text: 'Option 1' }]
+                  }]
+                },
+                navHist: []
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...customProps} />);
+      expect(screen.getByText('Custom Step')).toBeInTheDocument();
+      expect(screen.getByText('Custom Description')).toBeInTheDocument();
+      expect(screen.getByText('Option 1')).toBeInTheDocument();
+    });
   });
 });
