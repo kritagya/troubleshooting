@@ -6,10 +6,10 @@ import { withRouter, Router } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 
 // Create contexts
-const ModalContext = React.createContext({});
-const ConfigContext = React.createContext({});
-const ParamsContext = React.createContext({});
-const UiLoggerContext = React.createContext({});
+const ModalContext = React.createContext();
+const ConfigContext = React.createContext();
+const ParamsContext = React.createContext();
+const UiLoggerContext = React.createContext();
 
 // Import the actual component
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
@@ -20,12 +20,72 @@ const WrappedComponent = withRouter(TroubleShootingNewPage);
 // Helper function to render with all required contexts
 const renderWithContexts = (ui, { route = '/' } = {}) => {
   const history = createMemoryHistory({ initialEntries: [route] });
+  
+  // Mock additionalInfoSteps with proper structure
+  const additionalInfoSteps = [
+    {
+      id: 'step1',
+      title: 'Test Step',
+      description: 'Test Description',
+      templateId: 'TEST_TEMPLATE',
+      choices: [],
+      imageDetails: [],
+      buttons: [
+        {
+          id: 'continue',
+          text: 'Continue',
+          action: 'CONTINUE'
+        }
+      ],
+      options: [],
+      navHistory: []
+    }
+  ];
+
+  const modalContextValue = {
+    additionalInfoSteps,
+    setAdditionalInfoSteps: jest.fn(),
+    showModal: false,
+    setShowModal: jest.fn(),
+    modalContent: null,
+    setModalContent: jest.fn(),
+    modalParams: {
+      title: 'Test Modal',
+      body: 'Test Body',
+      buttons: []
+    }
+  };
+
+  const configContextValue = {
+    paramsDetails: { 
+      channel: 'CARE',
+      isDigital: false,
+      isRetail: false
+    },
+    config: {
+      isMobile: false,
+      isTablet: false
+    }
+  };
+
+  const paramsContextValue = {
+    paramsDetails: {
+      templateId: 'TEST_TEMPLATE',
+      step: additionalInfoSteps[0]
+    }
+  };
+
+  const uiLoggerContextValue = {
+    logUIEvent: jest.fn(),
+    logError: jest.fn()
+  };
+
   return render(
     <Router history={history}>
-      <ModalContext.Provider value={{ additionalInfoSteps: [] }}>
-        <ConfigContext.Provider value={{ paramsDetails: { channel: 'CARE' } }}>
-          <ParamsContext.Provider value={{ paramsDetails: {} }}>
-            <UiLoggerContext.Provider value={{}}>
+      <ModalContext.Provider value={modalContextValue}>
+        <ConfigContext.Provider value={configContextValue}>
+          <ParamsContext.Provider value={paramsContextValue}>
+            <UiLoggerContext.Provider value={uiLoggerContextValue}>
               {ui}
             </UiLoggerContext.Provider>
           </ParamsContext.Provider>
