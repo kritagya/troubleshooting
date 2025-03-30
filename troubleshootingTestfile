@@ -3,22 +3,28 @@ import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/re
 import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { Router } from 'react-router-dom';
+import { createMemoryHistory } from 'history';
+import TroubleShootingNewPage from '../TroubleShootingNewPage';
+import { UserProvider } from '../ModalContext';
 
 // Mock dependencies
+const mockHistoryPush = jest.fn();
+const mockLocation = {
+  hash: '',
+  pathname: '/test',
+  search: '',
+  state: {}
+};
+
 jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
   useHistory: () => ({
-    push: jest.fn(),
-    location: { hash: '' }
+    push: mockHistoryPush,
+    location: mockLocation
   }),
-  useLocation: () => ({
-    hash: '',
-    pathname: '/test'
-  })
+  useLocation: () => mockLocation
 }));
-
-
-// Import the actual component
-import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
 // Cleanup after each test
 afterEach(() => {
@@ -29,6 +35,8 @@ afterEach(() => {
 });
 
 describe('TroubleShootingNewPage Component', () => {
+  const history = createMemoryHistory();
+  
   const defaultProps = {
     functions: {
       handleTroubleShootingAction: jest.fn(),
@@ -55,12 +63,44 @@ describe('TroubleShootingNewPage Component', () => {
       symptom: {},
       selectedIssueOptionStep: '',
       thumbsDownSubmittedStep: false
+    },
+    history,
+    location: history.location,
+    match: {
+      params: {},
+      path: '/test',
+      url: '/test'
     }
+  };
+
+  const modalValue = {
+    additionalInfoSteps: [],
+    setAdditionalInfoSteps: jest.fn(),
+    showModal: false,
+    setShowModal: jest.fn(),
+    modalParams: {
+      title: '',
+      body: '',
+      primaryButton: { text: '', actionData: '' },
+      secondaryButton: { text: '', actionData: '' }
+    },
+    setModalParams: jest.fn()
+  };
+
+  const renderWithRouter = (ui, { route = '/test' } = {}) => {
+    history.push(route);
+    return render(
+      <Router history={history}>
+        <UserProvider value={modalValue}>
+          {ui}
+        </UserProvider>
+      </Router>
+    );
   };
 
   describe('Component Rendering', () => {
     it('should render with basic props', () => {
-      render(<TroubleShootingNewPage {...defaultProps} />);
+      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
       expect(screen.getByText('Test Step')).toBeInTheDocument();
       expect(screen.getByText('Test Description')).toBeInTheDocument();
     });
@@ -88,11 +128,10 @@ describe('TroubleShootingNewPage Component', () => {
         }
       };
 
-      render(<TroubleShootingNewPage {...props} />);
+      renderWithRouter(<TroubleShootingNewPage {...props} />);
       expect(screen.getByAltText('Test Image')).toBeInTheDocument();
     });
   });
-
 
   describe('Navigation', () => {
     it('should handle step navigation', () => {
@@ -119,22 +158,22 @@ describe('TroubleShootingNewPage Component', () => {
         }
       };
 
-      render(<TroubleShootingNewPage {...props} />);
+      renderWithRouter(<TroubleShootingNewPage {...props} />);
       
       const nextButton = screen.getByRole('button', { name: /next/i });
       const prevButton = screen.getByRole('button', { name: /previous/i });
       
       fireEvent.click(nextButton);
-      expect(defaultProps.functions.processTroubleShootingPage).toHaveBeenCalled();
+      expect(props.functions.processTroubleShootingPage).toHaveBeenCalled();
       
       fireEvent.click(prevButton);
-      expect(defaultProps.functions.processTroubleShootingPage).toHaveBeenCalled();
+      expect(props.functions.processTroubleShootingPage).toHaveBeenCalled();
     });
   });
 
   describe('Email Functionality', () => {
     it('should handle email sending', async () => {
-      render(<TroubleShootingNewPage {...defaultProps} />);
+      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
       
       const emailButton = screen.getByRole('button', { name: /send email/i });
       const emailInput = screen.getByRole('textbox', { name: /email/i });
@@ -154,7 +193,7 @@ describe('TroubleShootingNewPage Component', () => {
 
   describe('Component Lifecycle', () => {
     it('should clean up on unmount', () => {
-      const { unmount } = render(<TroubleShootingNewPage {...defaultProps} />);
+      const { unmount } = renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
       
       unmount();
       
