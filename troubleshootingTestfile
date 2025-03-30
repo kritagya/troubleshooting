@@ -145,4 +145,20 @@ describe('TroubleShootingNewPage Component', () => {
       expect(document.getElementsByClassName('INVOKE_OVERLAY')).toHaveLength(0);
     });
   });
+
+  describe('Basic Component Functionality', () => {
+    it('should receive props correctly', () => {
+      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
+      const step = defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
+      expect(step.templateId).toBe('TEST_TEMPLATE');
+      expect(step.title).toBe('Test Step');
+    });
+
+    it('should have required context providers', () => {
+      const { container } = renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
+      expect(container).toBeInTheDocument();
+      expect(modalValue.setShowModal).toBeDefined();
+      expect(uiLoggerValue.setPageDetails).toBeDefined();
+    });
+  });
 });
