@@ -3,6 +3,7 @@ import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/re
 import { act } from 'react-dom/test-utils';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
+import { sessionUtility } from '../../../shared/utilities/session';
 
 // Mock dependencies
 jest.mock('react-router-dom', () => ({
@@ -36,7 +37,7 @@ const mockSessionUtility = {
   getCaseDetails: jest.fn(() => ({}))
 };
 
-jest.mock('../../../../../../../shared/utilities/sessionUtility', () => mockSessionUtility);
+jest.mock('sessionUtility', () => mockSessionUtility);
 
 // Make mock available globally
 global.sessionUtility = mockSessionUtility;
