@@ -1,53 +1,165 @@
 import '@testing-library/jest-dom';
-import { render } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { act } from 'react-dom/test-utils';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
-import { MemoryRouter } from 'react-router-dom';
+
+// Mock dependencies
+jest.mock('react-router-dom', () => ({
+  useHistory: () => ({
+    push: jest.fn(),
+    location: { hash: '' }
+  }),
+  useLocation: () => ({
+    hash: '',
+    pathname: '/test'
+  })
+}));
+
+
+// Import the actual component
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
-import { UserProvider } from '../ModalContext';
 
-const mockModalValue = {
-  additionalInfoSteps: [
-    {
-      templateId: 'TEST_TEMPLATE',
-      title: 'Test Title',
-      description: 'Test Description'
-    }
-  ],
-  setAdditionalInfoSteps: jest.fn()
-};
+// Cleanup after each test
+afterEach(() => {
+  cleanup();
+  jest.clearAllMocks();
+  sessionStorage.clear();
+  localStorage.clear();
+});
 
-const renderWithProviders = (ui, { modalValue = mockModalValue } = {}) => {
-  return render(
-    <MemoryRouter>
-      <UserProvider value={modalValue}>
-        {ui}
-      </UserProvider>
-    </MemoryRouter>
-  );
-};
-
-describe('TroubleShootingNewPage', () => {
-  it('renders without crashing', () => {
-    const props = {
-      functions: {
-        handleTroubleShootingAction: jest.fn(),
-        handleAction: jest.fn(),
-        processTroubleShootingPage: jest.fn()
+describe('TroubleShootingNewPage Component', () => {
+  const defaultProps = {
+    functions: {
+      handleTroubleShootingAction: jest.fn(),
+      handleAction: jest.fn(),
+      processTroubleShootingPage: jest.fn()
+    },
+    values: {
+      troubleShootingInfo: {
+        ddata: {
+          output: {
+            pageContent: {
+              steps: [{
+                templateId: 'TEST_TEMPLATE',
+                title: 'Test Step',
+                description: 'Test Description',
+                choices: []
+              }]
+            },
+            navHist: []
+          }
+        }
       },
-      values: {
-        troubleShootingInfo: {
-          ddata: {
-            output: {
-              pageContent: {
-                steps: []
-              },
-              navHist: []
+      landingInfo: {},
+      symptom: {},
+      selectedIssueOptionStep: '',
+      thumbsDownSubmittedStep: false
+    }
+  };
+
+  describe('Component Rendering', () => {
+    it('should render with basic props', () => {
+      render(<TroubleShootingNewPage {...defaultProps} />);
+      expect(screen.getByText('Test Step')).toBeInTheDocument();
+      expect(screen.getByText('Test Description')).toBeInTheDocument();
+    });
+
+    it('should render description with images', () => {
+      const props = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    templateId: 'TEST_TEMPLATE',
+                    title: 'Test Step',
+                    description: 'Test Description',
+                    imageDetails: [{ url: 'test.jpg', alt: 'Test Image' }]
+                  }]
+                },
+                navHist: []
+              }
             }
           }
         }
-      }
-    };
+      };
 
-    renderWithProviders(<TroubleShootingNewPage {...props} />);
+      render(<TroubleShootingNewPage {...props} />);
+      expect(screen.getByAltText('Test Image')).toBeInTheDocument();
+    });
+  });
+
+
+  describe('Navigation', () => {
+    it('should handle step navigation', () => {
+      const props = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    templateId: 'TEST_TEMPLATE',
+                    title: 'Test Step',
+                    description: 'Test Description'
+                  }]
+                },
+                navHist: [{ pageId: 1 }],
+                prevStepEnabled: true,
+                nextStepEnabled: true
+              }
+            }
+          }
+        }
+      };
+
+      render(<TroubleShootingNewPage {...props} />);
+      
+      const nextButton = screen.getByRole('button', { name: /next/i });
+      const prevButton = screen.getByRole('button', { name: /previous/i });
+      
+      fireEvent.click(nextButton);
+      expect(defaultProps.functions.processTroubleShootingPage).toHaveBeenCalled();
+      
+      fireEvent.click(prevButton);
+      expect(defaultProps.functions.processTroubleShootingPage).toHaveBeenCalled();
+    });
+  });
+
+  describe('Email Functionality', () => {
+    it('should handle email sending', async () => {
+      render(<TroubleShootingNewPage {...defaultProps} />);
+      
+      const emailButton = screen.getByRole('button', { name: /send email/i });
+      const emailInput = screen.getByRole('textbox', { name: /email/i });
+      
+      userEvent.type(emailInput, 'test@example.com');
+      fireEvent.click(emailButton);
+      
+      await waitFor(() => {
+        expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            action: 'SendEmail'
+          })
+        );
+      });
+    });
+  });
+
+  describe('Component Lifecycle', () => {
+    it('should clean up on unmount', () => {
+      const { unmount } = render(<TroubleShootingNewPage {...defaultProps} />);
+      
+      unmount();
+      
+      // Verify cleanup
+      expect(document.getElementsByClassName('INVOKE_OVERLAY')).toHaveLength(0);
+    });
   });
 });
