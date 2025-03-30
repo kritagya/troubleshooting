@@ -59,13 +59,14 @@ const renderWithContexts = (ui, { route = '/' } = {}) => {
 
 describe('TroubleShootingNewPage', () => {
   // Helper function to create props with default values
-  const createTestProps = ({
-    functions = {
-      handleTroubleShootingAction: () => {},
-      handleAction: () => {},
-      processTroubleShootingPage: () => {}
-    } = {},
-    values = {
+  const createTestProps = (options = {}) => {
+    const defaultFunctions = {
+      handleTroubleShootingAction: jest.fn(),
+      handleAction: jest.fn(),
+      processTroubleShootingPage: jest.fn()
+    };
+
+    const defaultValues = {
       troubleShootingInfo: sessionUtility.getTroubleShootingJson() || {
         ddata: {
           output: {
@@ -80,21 +81,19 @@ describe('TroubleShootingNewPage', () => {
       symptom: {},
       selectedIssueOptionStep: '',
       thumbsDownSubmittedStep: false
-    } = {}
-  } = {}) => ({
-    functions: {
-      handleTroubleShootingAction: jest.fn(functions.handleTroubleShootingAction),
-      handleAction: jest.fn(functions.handleAction),
-      processTroubleShootingPage: jest.fn(functions.processTroubleShootingPage)
-    },
-    values: {
-      troubleShootingInfo: values.troubleShootingInfo,
-      landingInfo: values.landingInfo || {},
-      symptom: values.symptom || {},
-      selectedIssueOptionStep: values.selectedIssueOptionStep || '',
-      thumbsDownSubmittedStep: values.thumbsDownSubmittedStep || false
-    }
-  });
+    };
+
+    return {
+      functions: {
+        ...defaultFunctions,
+        ...(options.functions || {})
+      },
+      values: {
+        ...defaultValues,
+        ...(options.values || {})
+      }
+    };
+  };
 
   it('renders without crashing', () => {
     const props = createTestProps();
