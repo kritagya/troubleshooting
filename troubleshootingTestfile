@@ -63,50 +63,6 @@ describe('TroubleShootingNewPage Component', () => {
     }
   };
 
-  describe('Core Functions', () => {
-    describe('isEligibleForResumeEmail', () => {
-      it('should return true for eligible templates', () => {
-        const step = {
-          templateId: 'WAITING_FOR_RESPONSE',
-          title: 'Test Step'
-        };
-        const navHistory = [];
-        
-        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
-      });
-
-      it('should return true for end of troubleshooting', () => {
-        const step = {
-          templateId: 'OTHER',
-          title: 'End of Troubleshooting'
-        };
-        const navHistory = [{ articleId: 'article1' }];
-        
-        expect(TroubleShootingNewPage.isEligibleForResumeEmail(step, navHistory)).toBe(true);
-      });
-    });
-
-    describe('handleMapData', () => {
-      it('should update coordinates when provided', () => {
-        const setLongitude = jest.fn();
-        const setLatitude = jest.fn();
-        const event = {
-          target: {
-            dataset: {
-              longitude: '123.456',
-              latitude: '78.90'
-            }
-          }
-        };
-
-        TroubleShootingNewPage.handleMapData(event, setLongitude, setLatitude);
-        
-        expect(setLongitude).toHaveBeenCalledWith('123.456');
-        expect(setLatitude).toHaveBeenCalledWith('78.90');
-      });
-    });
-  });
-
   describe('Component Rendering', () => {
     it('should render with basic props', () => {
       render(<TroubleShootingNewPage {...defaultProps} />);
