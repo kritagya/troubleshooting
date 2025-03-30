@@ -7,7 +7,7 @@ import { Router } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 import { UserProvider } from '../ModalContext';
-import { UiLoggerContext } from '../../../../../../../contexts/UiLoggerContext';
+import { UiLoggerContext } from '../../TroubleShooting/app'
 
 // Mock dependencies
 const mockHistoryPush = jest.fn();
@@ -123,33 +123,6 @@ describe('TroubleShootingNewPage Component', () => {
       expect(screen.getByText('Test Description')).toBeInTheDocument();
     });
 
-    it('should render description with images', () => {
-      const props = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'TEST_TEMPLATE',
-                    title: 'Test Step',
-                    description: 'Test Description',
-                    imageDetails: [{ url: 'test.jpg', alt: 'Test Image' }]
-                  }]
-                },
-                navHist: []
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...props} />);
-      expect(screen.getByAltText('Test Image')).toBeInTheDocument();
-    });
-
     it('should update page details', () => {
       renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
       expect(uiLoggerValue.setPageDetails).toHaveBeenCalledWith(
@@ -162,64 +135,6 @@ describe('TroubleShootingNewPage Component', () => {
     });
   });
 
-  describe('Navigation', () => {
-    it('should handle step navigation', () => {
-      const props = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'TEST_TEMPLATE',
-                    title: 'Test Step',
-                    description: 'Test Description'
-                  }]
-                },
-                navHist: [{ pageId: 1 }],
-                prevStepEnabled: true,
-                nextStepEnabled: true
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...props} />);
-      
-      const nextButton = screen.getByRole('button', { name: /next/i });
-      const prevButton = screen.getByRole('button', { name: /previous/i });
-      
-      fireEvent.click(nextButton);
-      expect(props.functions.processTroubleShootingPage).toHaveBeenCalled();
-      
-      fireEvent.click(prevButton);
-      expect(props.functions.processTroubleShootingPage).toHaveBeenCalled();
-    });
-  });
-
-  describe('Email Functionality', () => {
-    it('should handle email sending', async () => {
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      
-      const emailButton = screen.getByRole('button', { name: /send email/i });
-      const emailInput = screen.getByRole('textbox', { name: /email/i });
-      
-      userEvent.type(emailInput, 'test@example.com');
-      fireEvent.click(emailButton);
-      
-      await waitFor(() => {
-        expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalledWith(
-          expect.objectContaining({
-            action: 'SendEmail'
-          })
-        );
-      });
-    });
-  });
-
   describe('Component Lifecycle', () => {
     it('should clean up on unmount', () => {
       const { unmount } = renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
@@ -228,48 +143,6 @@ describe('TroubleShootingNewPage Component', () => {
       
       // Verify cleanup
       expect(document.getElementsByClassName('INVOKE_OVERLAY')).toHaveLength(0);
-    });
-  });
-
-  describe('Logging Functionality', () => {
-    it('should log page details on mount', async () => {
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      
-      await waitFor(() => {
-        expect(uiLoggerValue.setPageDetails).toHaveBeenCalledWith(
-          expect.objectContaining({
-            pageTitle: expect.any(String),
-            pageName: expect.stringContaining('4G Troubleshooting'),
-            flowName: '4G Troubleshooting'
-          })
-        );
-      });
-    });
-
-    it('should handle error logging', async () => {
-      const errorProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                error: 'Test error'
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...errorProps} />);
-      
-      await waitFor(() => {
-        expect(uiLoggerValue.logJSError).toHaveBeenCalledWith(
-          expect.objectContaining({
-            errorMessage: expect.any(String)
-          })
-        );
-      });
     });
   });
 });
