@@ -7,6 +7,7 @@ import { Router } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 import { UserProvider } from '../ModalContext';
+import { UiLoggerContext } from '../../../../../../../contexts/UiLoggerContext';
 
 // Mock dependencies
 const mockHistoryPush = jest.fn();
@@ -62,7 +63,10 @@ describe('TroubleShootingNewPage Component', () => {
       landingInfo: {},
       symptom: {},
       selectedIssueOptionStep: '',
-      thumbsDownSubmittedStep: false
+      thumbsDownSubmittedStep: false,
+      analysis: { title: 'Test Analysis' },
+      resolution: { title: 'Test Resolution' },
+      currentPageId: 'test-page-id'
     },
     history,
     location: history.location,
@@ -87,13 +91,27 @@ describe('TroubleShootingNewPage Component', () => {
     setModalParams: jest.fn()
   };
 
+  const uiLoggerValue = {
+    setPageDetails: jest.fn().mockImplementation((details) => {
+      uiLoggerValue.pageDetails = { ...details };
+      return Promise.resolve();
+    }),
+    pageDetails: {},
+    logClickStream: jest.fn().mockImplementation(() => Promise.resolve()),
+    logJSError: jest.fn().mockImplementation(() => Promise.resolve()),
+    logPageView: jest.fn().mockImplementation(() => Promise.resolve()),
+    logCustomEvent: jest.fn().mockImplementation(() => Promise.resolve())
+  };
+
   const renderWithRouter = (ui, { route = '/test' } = {}) => {
     history.push(route);
     return render(
       <Router history={history}>
-        <UserProvider value={modalValue}>
-          {ui}
-        </UserProvider>
+        <UiLoggerContext.Provider value={uiLoggerValue}>
+          <UserProvider value={modalValue}>
+            {ui}
+          </UserProvider>
+        </UiLoggerContext.Provider>
       </Router>
     );
   };
@@ -130,6 +148,17 @@ describe('TroubleShootingNewPage Component', () => {
 
       renderWithRouter(<TroubleShootingNewPage {...props} />);
       expect(screen.getByAltText('Test Image')).toBeInTheDocument();
+    });
+
+    it('should update page details', () => {
+      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
+      expect(uiLoggerValue.setPageDetails).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pageTitle: expect.any(String),
+          pageName: expect.stringContaining('4G Troubleshooting'),
+          flowName: '4G Troubleshooting'
+        })
+      );
     });
   });
 
@@ -199,6 +228,48 @@ describe('TroubleShootingNewPage Component', () => {
       
       // Verify cleanup
       expect(document.getElementsByClassName('INVOKE_OVERLAY')).toHaveLength(0);
+    });
+  });
+
+  describe('Logging Functionality', () => {
+    it('should log page details on mount', async () => {
+      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(uiLoggerValue.setPageDetails).toHaveBeenCalledWith(
+          expect.objectContaining({
+            pageTitle: expect.any(String),
+            pageName: expect.stringContaining('4G Troubleshooting'),
+            flowName: '4G Troubleshooting'
+          })
+        );
+      });
+    });
+
+    it('should handle error logging', async () => {
+      const errorProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                error: 'Test error'
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...errorProps} />);
+      
+      await waitFor(() => {
+        expect(uiLoggerValue.logJSError).toHaveBeenCalledWith(
+          expect.objectContaining({
+            errorMessage: expect.any(String)
+          })
+        );
+      });
     });
   });
 });
