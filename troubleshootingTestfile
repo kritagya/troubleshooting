@@ -4,12 +4,10 @@ import React from 'react';
 import { sessionUtility } from '../../../shared/utilities/session';
 import { withRouter, Router } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
-
-// Create contexts
-const ModalContext = React.createContext();
-const ConfigContext = React.createContext();
-const ParamsContext = React.createContext();
-const UiLoggerContext = React.createContext();
+import { ModalContext } from '../../../shared/contexts/ModalContext';
+import { ConfigContext } from '../../../shared/contexts/ConfigContext';
+import { ParamsContext } from '../../../shared/contexts/ParamsContext';
+import { UiLoggerContext } from '../../../shared/contexts/UiLoggerContext';
 
 // Import the actual component
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
@@ -21,39 +19,19 @@ const WrappedComponent = withRouter(TroubleShootingNewPage);
 const renderWithContexts = (ui, { route = '/' } = {}) => {
   const history = createMemoryHistory({ initialEntries: [route] });
   
-  // Mock additionalInfoSteps with proper structure
-  const additionalInfoSteps = [
-    {
-      id: 'step1',
-      title: 'Test Step',
-      description: 'Test Description',
-      templateId: 'TEST_TEMPLATE',
-      choices: [],
-      imageDetails: [],
-      buttons: [
-        {
-          id: 'continue',
-          text: 'Continue',
-          action: 'CONTINUE'
-        }
-      ],
-      options: [],
-      navHistory: []
-    }
-  ];
-
   const modalContextValue = {
-    additionalInfoSteps,
+    additionalInfoSteps: [],
     setAdditionalInfoSteps: jest.fn(),
     showModal: false,
     setShowModal: jest.fn(),
     modalContent: null,
     setModalContent: jest.fn(),
     modalParams: {
-      title: 'Test Modal',
-      body: 'Test Body',
+      title: '',
+      body: '',
       buttons: []
-    }
+    },
+    setModalParams: jest.fn()
   };
 
   const configContextValue = {
@@ -61,23 +39,15 @@ const renderWithContexts = (ui, { route = '/' } = {}) => {
       channel: 'CARE',
       isDigital: false,
       isRetail: false
-    },
-    config: {
-      isMobile: false,
-      isTablet: false
     }
   };
 
   const paramsContextValue = {
-    paramsDetails: {
-      templateId: 'TEST_TEMPLATE',
-      step: additionalInfoSteps[0]
-    }
+    paramsDetails: {}
   };
 
   const uiLoggerContextValue = {
-    logUIEvent: jest.fn(),
-    logError: jest.fn()
+    logUIEvent: jest.fn()
   };
 
   return render(
