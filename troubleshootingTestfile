@@ -1,113 +1,123 @@
 import '@testing-library/jest-dom';
-import { render } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
+import { sessionUtility } from '../../../shared/utilities/session';
 import { withRouter, Router } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
-import TroubleShootingNewPage from '../TroubleShooting/TroubleShootingNewPage';
-
-// Create contexts
-const ModalContext = React.createContext();
-const ConfigContext = React.createContext();
-const ParamsContext = React.createContext();
-const UiLoggerContext = React.createContext();
+import { ModalContext } from '../../../../NSATRG/templates/TroubleShooting/ModalContext';
+import { ConfigContext } from "../../../../../IssueSelector";
+import { ParamsContext } from  "../../../../../IssueSelector";
+// Import the actual component
+import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
 // Create a wrapped version of the component
 const WrappedComponent = withRouter(TroubleShootingNewPage);
 
+// Helper function to render with all required contexts
+const renderWithContexts = (ui, { route = '/' } = {}) => {
+  const history = createMemoryHistory({ initialEntries: [route] });
+  
+  const modalContextValue = {
+    additionalInfoSteps: [],
+    setAdditionalInfoSteps: jest.fn(),
+    showModal: false,
+    setShowModal: jest.fn(),
+    modalContent: null,
+    setModalContent: jest.fn(),
+    modalParams: {
+      title: '',
+      body: '',
+      buttons: []
+    },
+    setModalParams: jest.fn()
+  };
+
+  const configContextValue = {
+    paramsDetails: { 
+      channel: 'CARE',
+      isDigital: false,
+      isRetail: false
+    }
+  };
+
+  const paramsContextValue = {
+    paramsDetails: {}
+  };
+
+  return render(
+    <Router history={history}>
+      <ModalContext.Provider value={modalContextValue}>
+        <ConfigContext.Provider value={configContextValue}>
+          <ParamsContext.Provider value={paramsContextValue}>
+              {ui}
+          </ParamsContext.Provider>
+        </ConfigContext.Provider>
+      </ModalContext.Provider>
+    </Router>
+  );
+};
+
 describe('TroubleShootingNewPage', () => {
-  it('renders without crashing', () => {
-    const history = createMemoryHistory();
-    
-    const modalValue = {
-      additionalInfoSteps: [],
-      setAdditionalInfoSteps: jest.fn(),
-      showModal: false,
-      setShowModal: jest.fn()
+  // Helper function to create props with default values
+  const createTestProps = (options = {}) => {
+    const defaultFunctions = {
+      handleTroubleShootingAction: jest.fn(),
+      handleAction: jest.fn(),
+      processTroubleShootingPage: jest.fn()
     };
 
-    const uiLoggerValue = {
-      setPageDetails: jest.fn(),
-      pageDetails: {}
+    const defaultValues = {
+      troubleShootingInfo: sessionUtility.getTroubleShootingJson() || {
+        ddata: {
+          output: {
+            pageContent: {
+              steps: []
+            },
+            navHist: []
+          }
+        }
+      },
+      landingInfo: {},
+      symptom: {},
+      selectedIssueOptionStep: '',
+      thumbsDownSubmittedStep: false
     };
 
-    const props = {
+    return {
       functions: {
-        handleTroubleShootingAction: jest.fn(),
-        handleAction: jest.fn(),
-        processTroubleShootingPage: jest.fn()
+        ...defaultFunctions,
+        ...(options.functions || {})
       },
       values: {
-        troubleShootingInfo: {
-          ddata: {
-            output: {
-              pageContent: {
-                steps: []
-              },
-              navHist: []
-            }
-          }
-        },
-        landingInfo: {},
-        symptom: {},
-        selectedIssueOptionStep: '',
-        thumbsDownSubmittedStep: false,
-        analysis: { title: 'Test Analysis' },
-        resolution: { title: 'Test Resolution' },
-        currentPageId: 'test-page-id'
+        ...defaultValues,
+        ...(options.values || {})
       }
     };
+  };
 
-    render(
-      <Router history={history}>
-        <UiLoggerContext.Provider value={uiLoggerValue}>
-          <ModalContext.Provider value={modalValue}>
-            <ConfigContext.Provider value={{ paramsDetails: { channel: 'CARE' } }}>
-              <ParamsContext.Provider value={{ paramsDetails: {} }}>
-                <WrappedComponent {...props} />
-              </ParamsContext.Provider>
-            </ConfigContext.Provider>
-          </ModalContext.Provider>
-        </UiLoggerContext.Provider>
-      </Router>
-    );
+  it('renders without crashing', () => {
+    const props = createTestProps();
+    renderWithContexts(<WrappedComponent {...props} />);
   });
-});
-leAction: jest.fn(),
-        processTroubleShootingPage: jest.fn()
-      },
+
+  it('renders with custom props', () => {
+    const customProps = createTestProps({
       values: {
         troubleShootingInfo: {
           ddata: {
             output: {
               pageContent: {
-                steps: []
+                steps: [{
+                  id: 'test-step',
+                  title: 'Test Step'
+                }]
               },
               navHist: []
             }
           }
-        },
-        landingInfo: {},
-        symptom: {},
-        selectedIssueOptionStep: '',
-        thumbsDownSubmittedStep: false,
-        analysis: { title: 'Test Analysis' },
-        resolution: { title: 'Test Resolution' },
-        currentPageId: 'test-page-id'
+        }
       }
-    };
-
-    render(
-      <Router history={history}>
-        <UiLoggerContext.Provider value={uiLoggerValue}>
-          <ModalContext.Provider value={modalValue}>
-            <ConfigContext.Provider value={{ paramsDetails: { channel: 'CARE' } }}>
-              <ParamsContext.Provider value={{ paramsDetails: {} }}>
-                <WrappedComponent {...props} />
-              </ParamsContext.Provider>
-            </ConfigContext.Provider>
-          </ModalContext.Provider>
-        </UiLoggerContext.Provider>
-      </Router>
-    );
+    });
+    renderWithContexts(<WrappedComponent {...customProps} />);
   });
 });
