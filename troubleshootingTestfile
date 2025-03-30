@@ -5,7 +5,12 @@ import { MemoryRouter, Route } from 'react-router-dom';
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
 // Create contexts
-const ModalContext = React.createContext();
+const ModalContext = React.createContext({
+  additionalInfoSteps: [],
+  setAdditionalInfoSteps: () => {},
+  showModal: false,
+  setShowModal: () => {}
+});
 const ConfigContext = React.createContext();
 const ParamsContext = React.createContext();
 const UiLoggerContext = React.createContext();
@@ -16,7 +21,14 @@ describe('TroubleShootingNewPage', () => {
       additionalInfoSteps: [],
       setAdditionalInfoSteps: jest.fn(),
       showModal: false,
-      setShowModal: jest.fn()
+      setShowModal: jest.fn(),
+      modalParams: {
+        title: '',
+        body: '',
+        primaryButton: {},
+        secondaryButton: {}
+      },
+      setModalParams: jest.fn()
     };
 
     const uiLoggerValue = {
@@ -55,8 +67,18 @@ describe('TroubleShootingNewPage', () => {
       <MemoryRouter initialEntries={['/test']}>
         <UiLoggerContext.Provider value={uiLoggerValue}>
           <ModalContext.Provider value={modalValue}>
-            <ConfigContext.Provider value={{ paramsDetails: { channel: 'CARE' } }}>
-              <ParamsContext.Provider value={{ paramsDetails: {} }}>
+            <ConfigContext.Provider value={{ 
+              paramsDetails: { 
+                channel: 'CARE',
+                enableDelphiBannerIds: '',
+                delphiSiteSurveySummaryIds: ''
+              } 
+            }}>
+              <ParamsContext.Provider value={{ 
+                paramsDetails: {
+                  channel: 'CARE'
+                } 
+              }}>
                 <Route>
                   {routeProps => <TroubleShootingNewPage {...props} {...routeProps} />}
                 </Route>
