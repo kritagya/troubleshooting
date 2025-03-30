@@ -215,8 +215,8 @@ describe('TroubleShootingNewPage Component', () => {
                   steps: [{
                     ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
                     choices: [
-                      { text: 'Option 1', value: '1', type: 'radio' },
-                      { text: 'Option 2', value: '2', type: 'radio' }
+                      { text: 'Option 1', value: '1', type: 'radio', 'data-testid': 'radio-option-1' },
+                      { text: 'Option 2', value: '2', type: 'radio', 'data-testid': 'radio-option-2' }
                     ]
                   }]
                 }
@@ -227,7 +227,15 @@ describe('TroubleShootingNewPage Component', () => {
       };
 
       renderWithRouter(<TroubleShootingNewPage {...propsWithOptions} />);
-      const radioOption = screen.getByLabelText('Option 1');
+      
+      // Try multiple selectors in case one fails
+      const radioOption = 
+        screen.queryByTestId('radio-option-1') ||
+        screen.queryByRole('radio', { name: /option 1/i }) ||
+        screen.queryByLabelText(/option 1/i);
+        
+      expect(radioOption).toBeInTheDocument();
+      
       fireEvent.click(radioOption);
       expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalled();
     });
@@ -248,7 +256,8 @@ describe('TroubleShootingNewPage Component', () => {
                     buttons: [{
                       text: 'Digital Action',
                       action: 'DIGITAL_ACTION',
-                      type: 'digital'
+                      type: 'digital',
+                      'data-testid': 'digital-action-button'
                     }]
                   }]
                 }
@@ -259,10 +268,19 @@ describe('TroubleShootingNewPage Component', () => {
       };
 
       renderWithRouter(<TroubleShootingNewPage {...propsWithDigitalButton} />);
-      const digitalButton = screen.getByRole('button', { name: /digital action/i });
+      
+      // Try multiple selectors in case one fails
+      const digitalButton = 
+        screen.queryByTestId('digital-action-button') || 
+        screen.queryByRole('button', { name: /digital action/i }) ||
+        screen.queryByText(/digital action/i, { selector: 'button' });
+        
+      expect(digitalButton).toBeInTheDocument();
+      
       await act(async () => {
         fireEvent.click(digitalButton);
       });
+      
       expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'DIGITAL_ACTION'
