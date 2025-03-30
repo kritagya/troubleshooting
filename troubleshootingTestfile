@@ -1,8 +1,7 @@
 import '@testing-library/jest-dom';
 import { render } from '@testing-library/react';
 import React from 'react';
-import { withRouter, Router } from 'react-router-dom';
-import { createMemoryHistory } from 'history';
+import { BrowserRouter, withRouter } from 'react-router-dom';
 import TroubleShootingNewPage from '../TroubleShootingNewPage';
 
 // Create contexts
@@ -11,14 +10,8 @@ const ConfigContext = React.createContext();
 const ParamsContext = React.createContext();
 const UiLoggerContext = React.createContext();
 
-// Create a wrapped version of the component
-const WrappedComponent = withRouter(TroubleShootingNewPage);
-
 describe('TroubleShootingNewPage', () => {
   it('renders without crashing', () => {
-    const history = createMemoryHistory();
-    history.push('/test-path');
-    
     const modalValue = {
       additionalInfoSteps: [],
       setAdditionalInfoSteps: jest.fn(),
@@ -29,17 +22,6 @@ describe('TroubleShootingNewPage', () => {
     const uiLoggerValue = {
       setPageDetails: jest.fn(),
       pageDetails: {}
-    };
-
-    const routerProps = {
-      history,
-      location: history.location,
-      match: {
-        params: {},
-        path: '/test-path',
-        url: '/test-path',
-        isExact: true
-      }
     };
 
     const props = {
@@ -66,22 +48,23 @@ describe('TroubleShootingNewPage', () => {
         analysis: { title: 'Test Analysis' },
         resolution: { title: 'Test Resolution' },
         currentPageId: 'test-page-id'
-      },
-      ...routerProps
+      }
     };
 
+    const Component = withRouter(TroubleShootingNewPage);
+
     render(
-      <Router history={history}>
+      <BrowserRouter>
         <UiLoggerContext.Provider value={uiLoggerValue}>
           <ModalContext.Provider value={modalValue}>
             <ConfigContext.Provider value={{ paramsDetails: { channel: 'CARE' } }}>
               <ParamsContext.Provider value={{ paramsDetails: {} }}>
-                <WrappedComponent {...props} />
+                <Component {...props} />
               </ParamsContext.Provider>
             </ConfigContext.Provider>
           </ModalContext.Provider>
         </UiLoggerContext.Provider>
-      </Router>
+      </BrowserRouter>
     );
   });
 });
