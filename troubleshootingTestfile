@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { withRouter, Router } from 'react-router-dom';
 import { createMemoryHistory } from 'history';
-import TroubleShootingNewPage from '../TroubleShootingNewPage';
+import TroubleShootingNewPage from '../TroubleShooting/TroubleShootingNewPage';
 
 // Create contexts
 const ModalContext = React.createContext();
@@ -34,6 +34,45 @@ describe('TroubleShootingNewPage', () => {
       functions: {
         handleTroubleShootingAction: jest.fn(),
         handleAction: jest.fn(),
+        processTroubleShootingPage: jest.fn()
+      },
+      values: {
+        troubleShootingInfo: {
+          ddata: {
+            output: {
+              pageContent: {
+                steps: []
+              },
+              navHist: []
+            }
+          }
+        },
+        landingInfo: {},
+        symptom: {},
+        selectedIssueOptionStep: '',
+        thumbsDownSubmittedStep: false,
+        analysis: { title: 'Test Analysis' },
+        resolution: { title: 'Test Resolution' },
+        currentPageId: 'test-page-id'
+      }
+    };
+
+    render(
+      <Router history={history}>
+        <UiLoggerContext.Provider value={uiLoggerValue}>
+          <ModalContext.Provider value={modalValue}>
+            <ConfigContext.Provider value={{ paramsDetails: { channel: 'CARE' } }}>
+              <ParamsContext.Provider value={{ paramsDetails: {} }}>
+                <WrappedComponent {...props} />
+              </ParamsContext.Provider>
+            </ConfigContext.Provider>
+          </ModalContext.Provider>
+        </UiLoggerContext.Provider>
+      </Router>
+    );
+  });
+});
+leAction: jest.fn(),
         processTroubleShootingPage: jest.fn()
       },
       values: {
