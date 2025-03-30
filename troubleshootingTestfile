@@ -201,4 +201,115 @@ describe('TroubleShootingNewPage Component', () => {
       expect(screen.getByText('Custom Description')).toBeInTheDocument();
     });
   });
+
+  describe('Communication Features', () => {
+    it('should handle email functionality', () => {
+      const propsWithEmail = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    showEmailIcon: true,
+                    emailEnabled: true
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      const { container } = renderWithRouter(<TroubleShootingNewPage {...propsWithEmail} />);
+      const emailContainer = container.querySelector('.email-container');
+      expect(emailContainer).toBeInTheDocument();
+    });
+
+    it('should handle navigation history', () => {
+      const propsWithHistory = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0]
+                  }]
+                },
+                navHist: [
+                  { pageId: '1', title: 'Previous Step' }
+                ],
+                prevStepEnabled: true
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...propsWithHistory} />);
+      const navigationElement = screen.getByText('Previous Step');
+      expect(navigationElement).toBeInTheDocument();
+      
+      fireEvent.click(navigationElement);
+      expect(defaultProps.functions.processTroubleShootingPage).toHaveBeenCalled();
+    });
+
+    it('should handle step description rendering', () => {
+      const propsWithDescription = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    description: 'Detailed step description',
+                    htmlContent: '<p>HTML content</p>'
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...propsWithDescription} />);
+      expect(screen.getByText('Detailed step description')).toBeInTheDocument();
+    });
+
+    it('should handle step title rendering', () => {
+      const propsWithCustomTitle = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    title: 'Custom Title',
+                    templateId: 'CUSTOM_TEMPLATE'
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...propsWithCustomTitle} />);
+      const titleElement = screen.getByText('Custom Title');
+      expect(titleElement).toBeInTheDocument();
+      expect(titleElement).toHaveTextContent('Custom Title');
+    });
+  });
 });
