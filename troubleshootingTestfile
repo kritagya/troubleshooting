@@ -201,4 +201,73 @@ describe('TroubleShootingNewPage Component', () => {
       expect(screen.getByText('Custom Description')).toBeInTheDocument();
     });
   });
+
+  describe('Options Handling', () => {
+    it('should handle radio option changes', () => {
+      const propsWithOptions = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    choices: [
+                      { text: 'Option 1', value: '1', type: 'radio' },
+                      { text: 'Option 2', value: '2', type: 'radio' }
+                    ]
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...propsWithOptions} />);
+      const radioOption = screen.getByLabelText('Option 1');
+      fireEvent.click(radioOption);
+      expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalled();
+    });
+  });
+
+  describe('Button Actions', () => {
+    it('should handle digital button actions', async () => {
+      const propsWithDigitalButton = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    buttons: [{
+                      text: 'Digital Action',
+                      action: 'DIGITAL_ACTION',
+                      type: 'digital'
+                    }]
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...propsWithDigitalButton} />);
+      const digitalButton = screen.getByText('Digital Action');
+      await act(async () => {
+        fireEvent.click(digitalButton);
+      });
+      expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'DIGITAL_ACTION'
+        })
+      );
+    });
+  });
 });
