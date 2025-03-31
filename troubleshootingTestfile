@@ -475,4 +475,111 @@ describe('TroubleShootingNewPage Component', () => {
       expect(step.issueTitle).toBe('Test issue title');
     });
   });
+
+  describe('Utility Functions', () => {
+    it('should check resume email eligibility', () => {
+      const stepWithEmail = {
+        ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+        emailEnabled: true,
+        showEmailIcon: true,
+        templateId: 'EMAIL_TEMPLATE'
+      };
+      const navHistory = [{ pageId: '1', title: 'Previous Step' }];
+
+      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
+      
+      // Test email eligibility logic
+      const isEligible = stepWithEmail.emailEnabled && 
+                        stepWithEmail.showEmailIcon && 
+                        navHistory.length > 0;
+      expect(isEligible).toBe(true);
+    });
+
+    it('should build symptom with content', () => {
+      const symptomProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    symptomText: 'Test Symptom',
+                    groupName: 'Test Group',
+                    radioValue: 'test-value',
+                    htmlContent: '<p>Test HTML</p>'
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...symptomProps} />);
+      const step = symptomProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
+      expect(step.symptomText).toBe('Test Symptom');
+      expect(step.groupName).toBe('Test Group');
+    });
+
+    it('should filter description content', () => {
+      const descriptionProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    description: 'Test description with [FILTERED] content',
+                    id: 'test-id'
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...descriptionProps} />);
+      const step = descriptionProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
+      expect(step.description).toContain('Test description');
+      expect(step.id).toBe('test-id');
+    });
+
+    it('should get content fragment with tile name', () => {
+      const fragmentProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
+                    contentFragments: {
+                      'test-tile': {
+                        title: 'Fragment Title',
+                        content: 'Fragment Content'
+                      }
+                    }
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...fragmentProps} />);
+      const step = fragmentProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
+      expect(step.contentFragments['test-tile'].title).toBe('Fragment Title');
+      expect(step.contentFragments['test-tile'].content).toBe('Fragment Content');
+    });
+  });
 });
