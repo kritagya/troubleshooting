@@ -582,4 +582,139 @@ describe('TroubleShootingNewPage Component', () => {
       expect(step.contentFragments['test-tile'].content).toBe('Fragment Content');
     });
   });
+
+  describe('Critical Path Functions', () => {
+    it('should handle digital button click with resolution', async () => {
+      const digitalProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    templateId: 'DIGITAL_TEMPLATE',
+                    buttons: [{
+                      text: 'Digital Action',
+                      action: 'DIGITAL_ACTION',
+                      type: 'digital',
+                      resolutionId: 'test-resolution'
+                    }]
+                  }]
+                }
+              }
+            }
+          }
+        },
+        functions: {
+          ...defaultProps.functions,
+          handleTroubleShootingAction: jest.fn().mockResolvedValue({ success: true })
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...digitalProps} />);
+      const button = screen.queryByText('Digital Action');
+      expect(button).toBeInTheDocument();
+
+      await act(async () => {
+        fireEvent.click(button);
+      });
+
+      expect(digitalProps.functions.handleTroubleShootingAction).toHaveBeenCalled();
+    });
+
+    it('should handle digital options change', () => {
+      const optionsProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    templateId: 'OPTIONS_TEMPLATE',
+                    choices: [{
+                      text: 'Digital Option',
+                      value: 'digital-value',
+                      type: 'radio'
+                    }]
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...optionsProps} />);
+      const option = screen.queryByText('Digital Option');
+      expect(option).toBeInTheDocument();
+
+      fireEvent.click(option);
+      expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalled();
+    });
+
+    it('should handle NRB notification display', () => {
+      const nrbProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    templateId: 'NRB_TEMPLATE',
+                    nrbNotification: {
+                      title: 'NRB Notice',
+                      message: 'Test notification'
+                    }
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...nrbProps} />);
+      const notification = screen.queryByText('NRB Notice');
+      expect(notification).toBeInTheDocument();
+      expect(screen.queryByText('Test notification')).toBeInTheDocument();
+    });
+
+    it('should handle checklist changes', () => {
+      const checklistProps = {
+        ...defaultProps,
+        values: {
+          ...defaultProps.values,
+          troubleShootingInfo: {
+            ddata: {
+              output: {
+                pageContent: {
+                  steps: [{
+                    templateId: 'CHECKLIST_TEMPLATE',
+                    checklist: [{
+                      id: 'check1',
+                      text: 'Test Checklist Item',
+                      checked: false
+                    }]
+                  }]
+                }
+              }
+            }
+          }
+        }
+      };
+
+      renderWithRouter(<TroubleShootingNewPage {...checklistProps} />);
+      const checklistItem = screen.queryByText('Test Checklist Item');
+      expect(checklistItem).toBeInTheDocument();
+
+      fireEvent.click(checklistItem);
+      expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalled();
+    });
+  });
 });
