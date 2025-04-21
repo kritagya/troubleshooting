@@ -147,11 +147,12 @@ const Activity = ({ userPayload, isAccountManager, featureFlags }: Props) => {
     sortKeyType: 'date',
   });
 
-  // this useEffect is used for accessibility puposes where when u click load more button
-  // it will focus on the very first element rendered in the list
-  // todo: create a separate hook for this
-  useEffect(() => {
-    if (loadMoreClicked && pageData.length > 0) {
+  const onLoadMore = () => {
+    setLoadMoreClicked(true);
+    loadMore();
+    
+    // Focus on the first element of the newly loaded items
+    if (pageData.length > 0) {
       const firstElementIndex = (currentPage - 1) * 7;
       const allElements = document.querySelectorAll('[data-testid=listClick]');
       if (allElements.length > 0) {
@@ -159,15 +160,10 @@ const Activity = ({ userPayload, isAccountManager, featureFlags }: Props) => {
         firstElement?.focus();
       }
     }
-  }, [pageData, currentPage, loadMoreClicked]);
+  };
 
   const ViewAllStatus = allJourney?.body?.viewAll;
   const noActive = pageData.length === 0;
-
-  const onLoadMore = () => {
-    setLoadMoreClicked(true);
-    loadMore();
-  };
 
   if (isLoading || !isFetched || isFetching) return <SupportCaseSkeleton />;
 
