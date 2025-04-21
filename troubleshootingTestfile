@@ -1,720 +1,193 @@
-import '@testing-library/jest-dom';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
-import userEvent from '@testing-library/user-event';
-import React from 'react';
-import { Router } from 'react-router-dom';
-import { createMemoryHistory } from 'history';
-import TroubleShootingNewPage from '../TroubleShootingNewPage';
-import { UserProvider } from '../ModalContext';
-import { UiLoggerContext } from '../../TroubleShooting/app'
+'use client';
 
-// Mock dependencies
-const mockHistoryPush = jest.fn();
-const mockLocation = {
-  hash: '',
-  pathname: '/test',
-  search: '',
-  state: {}
+import { Body, TextLink, Title, TypographyColor } from '@vds/core';
+import { ColorTokens } from '@vds-tokens/color';
+import { useEffect, useState } from 'react';
+
+import LinkList from '@/components/LinkList';
+import { useAEMContent } from '@/customHooks/useAEMContent';
+import { useAllJourney } from '@/customHooks/useAllJournery';
+import { usePagination } from '@/customHooks/usePagination';
+import useStore from '@/customHooks/useStore';
+import { IAllJourney, IAllJourneyResponse } from '@/types/alljourney.types';
+import { IFeatureFlags } from '@/types/featureFlags.types';
+import { UserPayloadType } from '@/types/user.types';
+
+import ViewAllLink from './ViewAllLink';
+import { SupportCaseSkeleton } from './loading';
+
+export const FailedToLoadActivity = () => {
+  return (
+    <div className="flex flex-col relative max-w-[596px]">
+      <div className="flex flex-col gap-2 mt-8">
+        <Title size="medium">Failed to load current activity</Title>
+        <Body
+          size="large"
+          color={
+            ColorTokens.elements.secondary.onlight.value as TypographyColor
+          }
+        >
+          There was an error loading your current activity. Please try again
+          later.
+        </Body>
+      </div>
+    </div>
+  );
 };
 
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useHistory: () => ({
-    push: mockHistoryPush,
-    location: mockLocation
-  }),
-  useLocation: () => mockLocation
-}));
+export const NoCurrentActivity = () => {
+  const { data } = useAEMContent();
+  const zeroState =
+    data?.body?.serviceCentralContent?.activityContent?.zeroState;
+  return (
+    <div className="flex flex-col gap-2 mt-8">
+      <Title size="medium">{zeroState?.activityHeading}</Title>
+      <Body
+        size="large"
+        color={ColorTokens.elements.secondary.onlight.value as TypographyColor}
+      >
+        {zeroState?.activityDescription}
+      </Body>
+    </div>
+  );
+};
 
-// Cleanup after each test
-afterEach(() => {
-  cleanup();
-  jest.clearAllMocks();
-  sessionStorage.clear();
-  localStorage.clear();
-});
+const LoadMore = ({ onClick }: { onClick: () => void }) => (
+  <div className="mt-6">
+    <TextLink onClick={onClick}>Load more</TextLink>
+  </div>
+);
 
-describe('TroubleShootingNewPage Component', () => {
-  const history = createMemoryHistory();
-  
-  const defaultProps = {
-    functions: {
-      handleTroubleShootingAction: jest.fn(),
-      handleAction: jest.fn(),
-      processTroubleShootingPage: jest.fn()
-    },
-    values: {
-      troubleShootingInfo: {
-        ddata: {
-          output: {
-            pageContent: {
-              steps: [{
-                templateId: 'TEST_TEMPLATE',
-                title: 'Test Step',
-                description: 'Test Description',
-                choices: []
-              }]
-            },
-            navHist: []
-          }
-        }
-      },
-      landingInfo: {},
-      symptom: {},
-      selectedIssueOptionStep: '',
-      thumbsDownSubmittedStep: false,
-      analysis: { title: 'Test Analysis' },
-      resolution: { title: 'Test Resolution' },
-      currentPageId: 'test-page-id'
-    },
-    history,
-    location: history.location,
-    match: {
-      params: {},
-      path: '/test',
-      url: '/test'
+const getDetialUrl = (journey: IAllJourney) => {
+  if (journey.journeyType === 'ManagedResolution')
+    return `/support-request-details/${journey.journeyKey}`;
+  else return `/journey-details/${journey.journeyKey}`;
+};
+
+const isOpen = (journey: IAllJourney) =>
+  !['Closed', 'Completed'].includes(journey.status!);
+
+type GetOpenRequestsProps = {
+  allJourney: IAllJourneyResponse;
+  selectedMtn?: string;
+  isAccountManager: boolean;
+  featureFlags: IFeatureFlags;
+};
+const getOpenRequests = ({
+  allJourney,
+  selectedMtn,
+  isAccountManager,
+  featureFlags,
+}: GetOpenRequestsProps) => {
+  if (!allJourney) return [];
+
+  const journeyDetails = allJourney?.body?.journeyDetails || [];
+
+  return journeyDetails.filter(isOpen).map(journey => {
+    const description = `${journey?.statusDateDesc} ${journey?.updatedDate}`;
+    const subtitle = `${journey?.lineInfo?.firstName} (${journey?.lineInfo?.mobile})`;
+
+    if (!featureFlags?.multiRoleEnableFFlag) {
+      return {
+        ...journey,
+        href: getDetialUrl(journey),
+        subtitle: description,
+      };
+    } else if (isAccountManager && !!!selectedMtn) {
+      return {
+        ...journey,
+        href: getDetialUrl(journey),
+        description,
+        subtitle,
+      };
+    } else {
+      return {
+        ...journey,
+        href: getDetialUrl(journey),
+        description,
+      };
     }
+  });
+};
+
+type Props = {
+  userPayload: UserPayloadType;
+  isAccountManager: boolean;
+  featureFlags: IFeatureFlags;
+};
+
+const Activity = ({ userPayload, isAccountManager, featureFlags }: Props) => {
+  const [loadMoreClicked, setLoadMoreClicked] = useState(false);
+  const {
+    data: allJourney,
+    isFetching,
+    isFetched,
+    isLoading,
+  } = useAllJourney(userPayload);
+  const selectedMtn = useStore(state => state.store?.selectedMtn);
+
+  const journeyDetails = getOpenRequests({
+    isAccountManager,
+    allJourney,
+    selectedMtn,
+    featureFlags,
+  });
+
+  const { pageData, loadMore, hasMore, currentPage } = usePagination({
+    data: journeyDetails,
+    pageSize: 7,
+    infinity: true,
+    filters: [
+      {
+        key: 'mobile',
+        value: [selectedMtn],
+      },
+    ],
+    sortKey: 'lastUpdateDateTime',
+    sortKeyType: 'date',
+  });
+
+  // this useEffect is used for accessibility puposes where when u click load more button
+  // it will focus on the very first element rendered in the list
+  // todo: create a separate hook for this
+  useEffect(() => {
+    if (loadMoreClicked && pageData.length > 0) {
+      const firstElementIndex = (currentPage - 1) * 7;
+      const allElements = document.querySelectorAll('[data-testid=listClick]');
+      if (allElements.length > 0) {
+        const firstElement = allElements[firstElementIndex] as HTMLElement;
+        firstElement?.focus();
+      }
+    }
+  }, [pageData, currentPage, loadMoreClicked]);
+
+  const ViewAllStatus = allJourney?.body?.viewAll;
+  const noActive = pageData.length === 0;
+
+  const onLoadMore = () => {
+    setLoadMoreClicked(true);
+    loadMore();
   };
 
-  const modalValue = {
-    additionalInfoSteps: [],
-    setAdditionalInfoSteps: jest.fn(),
-    showModal: false,
-    setShowModal: jest.fn(),
-    modalParams: {
-      title: '',
-      body: '',
-      primaryButton: { text: '', actionData: '' },
-      secondaryButton: { text: '', actionData: '' }
-    },
-    setModalParams: jest.fn()
-  };
+  if (isLoading || !isFetched || isFetching) return <SupportCaseSkeleton />;
 
-  const uiLoggerValue = {
-    setPageDetails: jest.fn().mockImplementation((details) => {
-      uiLoggerValue.pageDetails = { ...details };
-      return Promise.resolve();
-    }),
-    pageDetails: {},
-    logClickStream: jest.fn().mockImplementation(() => Promise.resolve()),
-    logJSError: jest.fn().mockImplementation(() => Promise.resolve()),
-    logPageView: jest.fn().mockImplementation(() => Promise.resolve()),
-    logCustomEvent: jest.fn().mockImplementation(() => Promise.resolve())
-  };
+  return (
+    <div className="flex flex-col max-w-[596px] mb-6 md:mb-4">
+      {!featureFlags?.uiEnhanceEnableFFlag && ViewAllStatus && (
+        <ViewAllLink featureFlags={featureFlags} />
+      )}
+      {noActive && <NoCurrentActivity />}
+      <LinkList linkList={pageData} />
+      {!featureFlags?.uiEnhanceEnableFFlag && hasMore && (
+        <LoadMore onClick={onLoadMore} />
+      )}
 
-  const renderWithRouter = (ui, { route = '/test' } = {}) => {
-    history.push(route);
-    return render(
-      <Router history={history}>
-        <UiLoggerContext.Provider value={uiLoggerValue}>
-          <UserProvider value={modalValue}>
-            {ui}
-          </UserProvider>
-        </UiLoggerContext.Provider>
-      </Router>
-    );
-  };
-
-  describe('Component Rendering', () => {
-    it('should render with basic props', () => {
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      expect(screen.getByText('Test Step')).toBeInTheDocument();
-      expect(screen.getByText('Test Description')).toBeInTheDocument();
-    });
-
-    it('should update page details', () => {
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      expect(uiLoggerValue.setPageDetails).toHaveBeenCalledWith(
-        expect.objectContaining({
-          pageTitle: expect.any(String),
-          pageName: expect.stringContaining('4G Troubleshooting'),
-          flowName: '4G Troubleshooting'
-        })
-      );
-    });
-  });
-
-  describe('Component Lifecycle', () => {
-    it('should clean up on unmount', () => {
-      const { unmount } = renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      
-      unmount();
-      
-      // Verify cleanup
-      expect(document.getElementsByClassName('INVOKE_OVERLAY')).toHaveLength(0);
-    });
-  });
-
-  describe('Basic Component Functionality', () => {
-    it('should receive props correctly', () => {
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      const step = defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      expect(step.templateId).toBe('TEST_TEMPLATE');
-      expect(step.title).toBe('Test Step');
-    });
-
-    it('should have required context providers', () => {
-      const { container } = renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      expect(container).toBeInTheDocument();
-      expect(modalValue.setShowModal).toBeDefined();
-      expect(uiLoggerValue.setPageDetails).toBeDefined();
-    });
-
-    it('should handle modal state changes', () => {
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      
-      // Simulate modal state change
-      act(() => {
-        modalValue.setShowModal(true);
-      });
-      
-      expect(modalValue.setShowModal).toHaveBeenCalledWith(true);
-      expect(modalValue.setShowModal).toHaveBeenCalledTimes(1);
-    });
-
-    it('should render with custom step data', () => {
-      const customProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'CUSTOM_TEMPLATE',
-                    title: 'Custom Step',
-                    description: 'Custom Description',
-                    choices: [{ text: 'Option 1' }]
-                  }]
-                },
-                navHist: []
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...customProps} />);
-      expect(screen.getByText('Custom Step')).toBeInTheDocument();
-      expect(screen.getByText('Custom Description')).toBeInTheDocument();
-    });
-  });
-
-  describe('Communication Features', () => {
-
-    it('should handle navigation history', () => {
-      const propsWithHistory = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0]
-                  }]
-                },
-                navHist: [
-                  { pageId: '1', title: 'Previous Step' }
-                ],
-                prevStepEnabled: true
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithHistory} />);
-      const navigationElement = screen.getByText('Previous Step');
-      expect(navigationElement).toBeInTheDocument();
-    });
-
-    it('should handle step description rendering', () => {
-      const propsWithDescription = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    description: 'Detailed step description',
-                    htmlContent: '<p>HTML content</p>'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithDescription} />);
-      expect(screen.getByText('Detailed step description')).toBeInTheDocument();
-    });
-
-    it('should handle step title rendering', () => {
-      const propsWithCustomTitle = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    title: 'Custom Title',
-                    templateId: 'CUSTOM_TEMPLATE'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithCustomTitle} />);
-      const titleElement = screen.getByText('Custom Title');
-      expect(titleElement).toBeInTheDocument();
-      expect(titleElement).toHaveTextContent('Custom Title');
-    });
-  });
-
-  describe('Delphi Banner Functionality', () => {
-    it('should return true when template is eligible and no banner attributes', () => {
-      const propsWithDelphi = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'DELPHI_TEMPLATE',
-                    title: 'Delphi Step'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      const steps = propsWithDelphi.values.troubleShootingInfo.ddata.output.pageContent.steps;
-      const eligibleTemplates = 'DELPHI_TEMPLATE,OTHER_TEMPLATE';
-      const templateId = 'DELPHI_TEMPLATE';
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithDelphi} />);
-      
-      // Test the actual function logic
-      const result = steps[0].delphiBannerAttrs?.length ? false : eligibleTemplates.split(',').includes(templateId);
-      expect(result).toBe(true);
-    });
-
-    it('should return false when delphiBannerAttrs exist', () => {
-      const propsWithDelphiAttrs = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'DELPHI_TEMPLATE',
-                    delphiBannerAttrs: ['some-attr'],
-                    title: 'Delphi Step'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      const steps = propsWithDelphiAttrs.values.troubleShootingInfo.ddata.output.pageContent.steps;
-      const eligibleTemplates = 'DELPHI_TEMPLATE';
-      const templateId = 'DELPHI_TEMPLATE';
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithDelphiAttrs} />);
-      
-      // Test the actual function logic
-      const result = steps[0].delphiBannerAttrs?.length ? false : eligibleTemplates.split(',').includes(templateId);
-      expect(result).toBe(false);
-    });
-
-    it('should return false when template is not eligible', () => {
-      const propsWithIneligibleTemplate = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'INELIGIBLE_TEMPLATE',
-                    title: 'Ineligible Step'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      const steps = propsWithIneligibleTemplate.values.troubleShootingInfo.ddata.output.pageContent.steps;
-      const eligibleTemplates = 'DELPHI_TEMPLATE,OTHER_TEMPLATE';
-      const templateId = 'INELIGIBLE_TEMPLATE';
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithIneligibleTemplate} />);
-      
-      // Test the actual function logic
-      const result = steps[0].delphiBannerAttrs?.length ? false : eligibleTemplates.split(',').includes(templateId);
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('Recommended Offered Functionality', () => {
-
-    it('should handle empty questions array', () => {
-      const propsWithEmptyQuestions = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    questions: []
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithEmptyQuestions} />);
-      const step = propsWithEmptyQuestions.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      const questions = step.questions || [];
-      let noteText = '';
-      
-      if (questions.length > 0 && questions[0]?.choices) {
-        const choices = questions[0].choices;
-        for (let choice of choices) {
-          if (choice.recommended && choice.note !== null && choice.note !== undefined) {
-            noteText = choice.note;
-          }
-        }
-      }  
-      expect(noteText).toBe('');
-    });
-  });
-
-  describe('Content Display Functions', () => {
-    it('should render footer note with recommendation type', () => {
-      const propsWithFooterNote = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    footNote: 'Important note',
-                    recommendationTileType: 'info'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithFooterNote} />);
-      const step = propsWithFooterNote.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      expect(step.footNote).toBe('Important note');
-      expect(step.recommendationTileType).toBe('info');
-    });
-
-    it('should render step with issue description', () => {
-      const propsWithIssueDesc = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    issueDescription: 'Test issue description',
-                    issueTitle: 'Test issue title'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...propsWithIssueDesc} />);
-      const step = propsWithIssueDesc.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      expect(step.issueDescription).toBe('Test issue description');
-      expect(step.issueTitle).toBe('Test issue title');
-    });
-  });
-
-  describe('Utility Functions', () => {
-    it('should check resume email eligibility', () => {
-      const stepWithEmail = {
-        ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-        emailEnabled: true,
-        showEmailIcon: true,
-        templateId: 'EMAIL_TEMPLATE'
-      };
-      const navHistory = [{ pageId: '1', title: 'Previous Step' }];
-
-      renderWithRouter(<TroubleShootingNewPage {...defaultProps} />);
-      
-      // Test email eligibility logic
-      const isEligible = stepWithEmail.emailEnabled && 
-                        stepWithEmail.showEmailIcon && 
-                        navHistory.length > 0;
-      expect(isEligible).toBe(true);
-    });
-
-    it('should build symptom with content', () => {
-      const symptomProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    symptomText: 'Test Symptom',
-                    groupName: 'Test Group',
-                    radioValue: 'test-value',
-                    htmlContent: '<p>Test HTML</p>'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...symptomProps} />);
-      const step = symptomProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      expect(step.symptomText).toBe('Test Symptom');
-      expect(step.groupName).toBe('Test Group');
-    });
-
-    it('should filter description content', () => {
-      const descriptionProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    description: 'Test description with [FILTERED] content',
-                    id: 'test-id'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...descriptionProps} />);
-      const step = descriptionProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      expect(step.description).toContain('Test description');
-      expect(step.id).toBe('test-id');
-    });
-
-    it('should get content fragment with tile name', () => {
-      const fragmentProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    ...defaultProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0],
-                    contentFragments: {
-                      'test-tile': {
-                        title: 'Fragment Title',
-                        content: 'Fragment Content'
-                      }
-                    }
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...fragmentProps} />);
-      const step = fragmentProps.values.troubleShootingInfo.ddata.output.pageContent.steps[0];
-      expect(step.contentFragments['test-tile'].title).toBe('Fragment Title');
-      expect(step.contentFragments['test-tile'].content).toBe('Fragment Content');
-    });
-  });
-
-  describe('Critical Path Functions', () => {
-    it('should handle digital button click with resolution', async () => {
-      const digitalProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'DIGITAL_TEMPLATE',
-                    buttons: [{
-                      text: 'Digital Action',
-                      action: 'DIGITAL_ACTION',
-                      type: 'digital',
-                      resolutionId: 'test-resolution'
-                    }]
-                  }]
-                }
-              }
-            }
-          }
-        },
-        functions: {
-          ...defaultProps.functions,
-          handleTroubleShootingAction: jest.fn().mockResolvedValue({ success: true })
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...digitalProps} />);
-      const button = screen.queryByText('Digital Action');
-      expect(button).toBeInTheDocument();
-
-      await act(async () => {
-        fireEvent.click(button);
-      });
-
-      expect(digitalProps.functions.handleTroubleShootingAction).toHaveBeenCalled();
-    });
-
-    it('should handle digital options change', () => {
-      const optionsProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'OPTIONS_TEMPLATE',
-                    choices: [{
-                      text: 'Digital Option',
-                      value: 'digital-value',
-                      type: 'radio'
-                    }]
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...optionsProps} />);
-      const option = screen.queryByText('Digital Option');
-      expect(option).toBeInTheDocument();
-
-      fireEvent.click(option);
-      expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalled();
-    });
-
-    it('should handle NRB notification display', () => {
-      const nrbProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'NRB_TEMPLATE',
-                    nrbNotification: {
-                      title: 'NRB Notice',
-                      message: 'Test notification'
-                    }
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...nrbProps} />);
-      const notification = screen.queryByText('NRB Notice');
-      expect(notification).toBeInTheDocument();
-      expect(screen.queryByText('Test notification')).toBeInTheDocument();
-    });
-
-    it('should handle checklist changes', () => {
-      const checklistProps = {
-        ...defaultProps,
-        values: {
-          ...defaultProps.values,
-          troubleShootingInfo: {
-            ddata: {
-              output: {
-                pageContent: {
-                  steps: [{
-                    templateId: 'CHECKLIST_TEMPLATE',
-                    checklist: [{
-                      id: 'check1',
-                      text: 'Test Checklist Item',
-                      checked: false
-                    }]
-                  }]
-                }
-              }
-            }
-          }
-        }
-      };
-
-      renderWithRouter(<TroubleShootingNewPage {...checklistProps} />);
-      const checklistItem = screen.queryByText('Test Checklist Item');
-      expect(checklistItem).toBeInTheDocument();
-
-      fireEvent.click(checklistItem);
-      expect(defaultProps.functions.handleTroubleShootingAction).toHaveBeenCalled();
-    });
-  });
-});
+      {featureFlags?.uiEnhanceEnableFFlag && (
+        <div className="flex justify-center">
+          <ViewAllLink featureFlags={featureFlags} />
+        </div>
+      )}
+    </div>
+  );
+};
+export default Activity;
