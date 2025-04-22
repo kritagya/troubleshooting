@@ -1,189 +1,33 @@
+import { useCallback, useRef } from 'react';
+
+export function useSingleExecution(method: () => void) {
+  const isExecutedRef = useRef(false);
+  
+  const executeOnce = useCallback(() => {
+    if (!isExecutedRef.current) {
+      method();
+      isExecutedRef.current = true;
+    }
+  }, [method]);
+
+  return executeOnce;
+}
+
+
+
 'use client';
 
-import { Body, TextLink, Title, TypographyColor } from '@vds/core';
-import { ColorTokens } from '@vds-tokens/color';
-import { useEffect, useState } from 'react';
+import { useSingleExecution } from '../hooks/useSingleExecution';
 
-import LinkList from '@/components/LinkList';
-import { useAEMContent } from '@/customHooks/useAEMContent';
-import { useAllJourney } from '@/customHooks/useAllJournery';
-import { usePagination } from '@/customHooks/usePagination';
-import useStore from '@/customHooks/useStore';
-import { IAllJourney, IAllJourneyResponse } from '@/types/alljourney.types';
-import { IFeatureFlags } from '@/types/featureFlags.types';
-import { UserPayloadType } from '@/types/user.types';
-
-import ViewAllLink from './ViewAllLink';
-import { SupportCaseSkeleton } from './loading';
-
-export const FailedToLoadActivity = () => {
-  return (
-    <div className="flex flex-col relative max-w-[596px]">
-      <div className="flex flex-col gap-2 mt-8">
-        <Title size="medium">Failed to load current activity</Title>
-        <Body
-          size="large"
-          color={
-            ColorTokens.elements.secondary.onlight.value as TypographyColor
-          }
-        >
-          There was an error loading your current activity. Please try again
-          later.
-        </Body>
-      </div>
-    </div>
-  );
-};
-
-export const NoCurrentActivity = () => {
-  const { data } = useAEMContent();
-  const zeroState =
-    data?.body?.serviceCentralContent?.activityContent?.zeroState;
-  return (
-    <div className="flex flex-col gap-2 mt-8">
-      <Title size="medium">{zeroState?.activityHeading}</Title>
-      <Body
-        size="large"
-        color={ColorTokens.elements.secondary.onlight.value as TypographyColor}
-      >
-        {zeroState?.activityDescription}
-      </Body>
-    </div>
-  );
-};
-
-const LoadMore = ({ onClick }: { onClick: () => void }) => (
-  <div className="mt-6">
-    <TextLink onClick={onClick}>Load more</TextLink>
-  </div>
-);
-
-const getDetialUrl = (journey: IAllJourney) => {
-  if (journey.journeyType === 'ManagedResolution')
-    return `/support-request-details/${journey.journeyKey}`;
-  else return `/journey-details/${journey.journeyKey}`;
-};
-
-const isOpen = (journey: IAllJourney) =>
-  !['Closed', 'Completed'].includes(journey.status!);
-
-type GetOpenRequestsProps = {
-  allJourney: IAllJourneyResponse;
-  selectedMtn?: string;
-  isAccountManager: boolean;
-  featureFlags: IFeatureFlags;
-};
-const getOpenRequests = ({
-  allJourney,
-  selectedMtn,
-  isAccountManager,
-  featureFlags,
-}: GetOpenRequestsProps) => {
-  if (!allJourney) return [];
-
-  const journeyDetails = allJourney?.body?.journeyDetails || [];
-
-  return journeyDetails.filter(isOpen).map(journey => {
-    const description = `${journey?.statusDateDesc} ${journey?.updatedDate}`;
-    const subtitle = `${journey?.lineInfo?.firstName} (${journey?.lineInfo?.mobile})`;
-
-    if (!featureFlags?.multiRoleEnableFFlag) {
-      return {
-        ...journey,
-        href: getDetialUrl(journey),
-        subtitle: description,
-      };
-    } else if (isAccountManager && !!!selectedMtn) {
-      return {
-        ...journey,
-        href: getDetialUrl(journey),
-        description,
-        subtitle,
-      };
-    } else {
-      return {
-        ...journey,
-        href: getDetialUrl(journey),
-        description,
-      };
-    }
-  });
-};
-
-type Props = {
-  userPayload: UserPayloadType;
-  isAccountManager: boolean;
-  featureFlags: IFeatureFlags;
-};
-
-const Activity = ({ userPayload, isAccountManager, featureFlags }: Props) => {
-  const [loadMoreClicked, setLoadMoreClicked] = useState(false);
-  const {
-    data: allJourney,
-    isFetching,
-    isFetched,
-    isLoading,
-  } = useAllJourney(userPayload);
-  const selectedMtn = useStore(state => state.store?.selectedMtn);
-
-  const journeyDetails = getOpenRequests({
-    isAccountManager,
-    allJourney,
-    selectedMtn,
-    featureFlags,
-  });
-
-  const { pageData, loadMore, hasMore, currentPage } = usePagination({
-    data: journeyDetails,
-    pageSize: 7,
-    infinity: true,
-    filters: [
-      {
-        key: 'mobile',
-        value: [selectedMtn],
-      },
-    ],
-    sortKey: 'lastUpdateDateTime',
-    sortKeyType: 'date',
-  });
-
-  const onLoadMore = () => {
-    setLoadMoreClicked(true);
-    loadMore();
-    
-    // Focus on the first element of the newly loaded items
-    if (pageData.length > 0) {
-      const firstElementIndex = (currentPage - 1) * 7;
-      const allElements = document.querySelectorAll('[data-testid=listClick]');
-      if (allElements.length > 0) {
-        const firstElement = allElements[firstElementIndex] as HTMLElement;
-        firstElement?.focus();
-      }
-    }
+export function ChildComponent() {
+  const hello = () => {
+    console.log('Hello method executed!');
   };
 
-  const ViewAllStatus = allJourney?.body?.viewAll;
-  const noActive = pageData.length === 0;
+  const executeOnce = useSingleExecution(hello);
+  
+  // Execute once when component mounts
+  executeOnce();
 
-  if (isLoading || !isFetched || isFetching) return <SupportCaseSkeleton />;
-
-  return (
-    <div className="flex flex-col max-w-[596px] mb-6 md:mb-4">
-      {!featureFlags?.uiEnhanceEnableFFlag && ViewAllStatus && (
-        <ViewAllLink featureFlags={featureFlags} />
-      )}
-      {noActive && <NoCurrentActivity />}
-      <LinkList linkList={pageData} />
-      {!featureFlags?.uiEnhanceEnableFFlag && hasMore && (
-        <LoadMore onClick={onLoadMore} />
-      )}
-
-      {featureFlags?.uiEnhanceEnableFFlag && (
-        <div className="flex justify-center">
-          <ViewAllLink featureFlags={featureFlags} />
-        </div>
-      )}
-    </div>
-  );
-};
-export default Activity;
+  return null;
+}
