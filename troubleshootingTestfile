@@ -1,33 +1,37 @@
-import { useCallback, useRef } from 'react';
 
-export function useSingleExecution(method: () => void) {
-  const isExecutedRef = useRef(false);
-  
-  const executeOnce = useCallback(() => {
-    if (!isExecutedRef.current) {
-      method();
-      isExecutedRef.current = true;
-    }
-  }, [method]);
-
-  return executeOnce;
-}
 
 
 
 'use client';
 
-import { useSingleExecution } from '../hooks/useSingleExecution';
+'use client';
 
-export function ChildComponent() {
-  const hello = () => {
-    console.log('Hello method executed!');
+import { useSingleExecution } from '@/customHooks/useSingleExecution'; 
+import { nativeUpdateFab } from '@/utils/native';
+
+
+export const NativeChat = () => { 
+  const executeNativeChat = useSingleExecution(nativeUpdateFab);
+  return  <>{executeNativeChat()}</>;
+}
+
+
+export const nativeUpdateFab = () => {
+  const actionInfo = {
+    actionType: 'updateChatFab',
+    chatFab: { hideFabOverlay: true },
   };
+  invokeNative(JSON.stringify(actionInfo));
+};
 
-  const executeOnce = useSingleExecution(hello);
-  
-  // Execute once when component mounts
-  executeOnce();
+import { useCallback, useRef } from 'react';
 
-  return null;
+export function useSingleExecution(method: () => void) {
+  const isExecutedRef = useRef(false);
+  return useCallback(() => {
+    if (!isExecutedRef.current) {
+      method();
+      isExecutedRef.current = true;
+    }
+  }, [method]);
 }
