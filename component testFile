@@ -1,0 +1,38 @@
+import { render, screen } from '@testing-library/react';
+import { NativeChat } from './ChildComponent';
+import { useSingleExecution } from '../hooks/useOnce';
+
+// Mock the useSingleExecution hook
+jest.mock('../hooks/useOnce', () => ({
+  useSingleExecution: jest.fn()
+}));
+
+// Mock the nativeUpdateFab function
+const mockNativeUpdateFab = jest.fn();
+
+describe('NativeChat Component', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should call useSingleExecution with nativeUpdateFab', () => {
+    // Mock the useSingleExecution hook to return a function
+    (useSingleExecution as jest.Mock).mockReturnValue(mockNativeUpdateFab);
+
+    render(<NativeChat />);
+
+    // Verify useSingleExecution was called with nativeUpdateFab
+    expect(useSingleExecution).toHaveBeenCalledWith(mockNativeUpdateFab);
+  });
+
+  it('should execute the returned function from useSingleExecution', () => {
+    // Mock the useSingleExecution hook to return a function
+    const mockExecute = jest.fn();
+    (useSingleExecution as jest.Mock).mockReturnValue(mockExecute);
+
+    render(<NativeChat />);
+
+    // Verify the returned function was called
+    expect(mockExecute).toHaveBeenCalled();
+  });
+});
